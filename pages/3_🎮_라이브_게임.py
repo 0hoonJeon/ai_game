@@ -11,7 +11,10 @@ global_db = get_global_db()
 # 세션 상태 초기화
 if 'player_auth' not in st.session_state: st.session_state['player_auth'] = False
 if 'spectator_profile' not in st.session_state: st.session_state['spectator_profile'] = None
-
+st.link_button(
+    "테트리스 직접 열기",
+    "/static/tetris.html"
+)
 st.title("🎮 라이브 게임 경기장")
 st.markdown("선수는 인증 후 조작 가능하며, 관전자는 응원 팀을 선택해 채팅에 참여합니다.")
 st.divider()
