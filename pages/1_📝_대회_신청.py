@@ -3,7 +3,7 @@ import pandas as pd
 from datetime import datetime
 
 # 페이지 기본 설정
-st.set_page_config(page_title="대회 신청 - 사이버 듀얼", page_icon="📝", layout="centered")
+st.set_page_config(page_title="대회 신청 - 사이버 듀얼", page_icon="📝", layout="wide")
 
 # 세션 상태(Session State) 초기화: 참가자 데이터를 임시 저장할 리스트 생성
 if 'participants' not in st.session_state:
