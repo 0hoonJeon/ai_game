@@ -50,7 +50,7 @@ if mode == "🎮 대회 선수 (인증 필요)":
                         st.error("❌ 인증 키가 일치하지 않습니다.")
     else:
         st.success("✅ 선수 인증이 완료되었습니다. 아래 화면에서 방을 만들거나 참여하세요.")
-        if st.button("🚪 선수 로그아웃", size="small"):
+        if st.button("🚪 선수 로그아웃"):
             st.session_state['player_auth'] = False
             st.rerun()
             
