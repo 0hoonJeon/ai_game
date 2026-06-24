@@ -1,91 +1,98 @@
 import streamlit as st
 import pandas as pd
 import random
+import math
 
-# 무조건 와이드 레이아웃 적용
-st.set_page_config(page_title="참가자 명단 및 대진표", page_icon="🏆", layout="wide")
+st.set_page_config(page_title="참가자 및 대진표", page_icon="🏆", layout="wide")
 
-st.title("🏆 대회 참가자 라인업 & 대진표 생성")
-st.markdown("현재까지 등록된 사이버 듀얼 테트리스 챔피언십 참가자 명단을 확인하고, 공식 대진표를 추첨합니다.")
-
+st.title("🏆 대회 참가자 라인업 & 대진표")
+st.markdown("공식 참가자를 확인하고, 토너먼트 룰(부전승 포함)에 맞춘 대진표를 추첨합니다.")
 st.divider()
 
-# 1. 참가자 데이터 확인 (예외 처리)
 if 'participants' not in st.session_state or len(st.session_state['participants']) == 0:
-    st.warning("🚨 아직 참가 신청한 선수가 없습니다. 좌측 '대회 신청' 페이지에서 먼저 참가자를 등록해주세요.")
+    st.warning("🚨 아직 참가 신청한 선수가 없습니다.")
     st.stop()
 
 participants = st.session_state['participants']
 player_names = [p['닉네임'] for p in participants]
 
-# ── [섹션 1] 대회 참가자 전격 공개 ──
-st.subheader(f"👥 공식 참가자 라인업 (총 {len(player_names)}명)")
-
-# 와이드 레이아웃의 장점을 살려 좌측엔 표, 우측엔 티어별 통계를 배치
-col_table, col_stat = st.columns([2, 1])
-
-with col_table:
+# ── [섹션 1] 참가자 공개 ──
+with st.expander(f"👥 공식 참가자 명단 열어보기 (총 {len(player_names)}명)", expanded=False):
     df = pd.DataFrame(participants)
-    # 연락처(이메일)는 가리고 출력
     display_df = df.drop(columns=['연락처']) if '연락처' in df.columns else df
     st.dataframe(display_df, use_container_width=True, hide_index=True)
 
-with col_stat:
-    st.markdown("**📊 티어별 참가자 분포**")
-    if '티어' in df.columns:
-        tier_counts = df['티어'].value_counts()
-        st.bar_chart(tier_counts)
-    else:
-        st.info("티어 데이터가 없습니다.")
+st.subheader("🎲 공식 토너먼트 대진표")
 
-st.divider()
+# ── [토너먼트 알고리즘 (부전승 계산)] ──
+# 현재 인원보다 큰 가장 가까운 2의 제곱수 구하기 (예: 14명 -> 16강)
+next_pow2 = 2 ** math.ceil(math.log2(len(player_names))) if len(player_names) > 1 else 2
+num_byes = next_pow2 - len(player_names)
 
-# ── [섹션 2] 대진표 생성 및 시각화 ──
-st.subheader("🎲 공식 대진표 추첨")
+st.info(f"💡 **토너먼트 정보:** 총 {len(player_names)}명 참가 → **{next_pow2}강 대진표** 기준 생성 (부전승 {num_byes}명 포함)")
 
-# 세션 상태 초기화
-if 'matches' not in st.session_state:
-    st.session_state['matches'] = []
-
-# 버튼 디자인 (와이드 화면 중앙 배치 느낌을 위해 columns 사용)
-btn_col1, btn_col2, btn_col3 = st.columns([1, 2, 1])
-with btn_col2:
+# 버튼을 중앙에 예쁘게 배치
+_, btn_col, _ = st.columns([1, 2, 1])
+with btn_col:
     if st.button("🔥 무작위 대진표 추첨 시작 🔥", use_container_width=True, type="primary"):
-        if len(player_names) < 2:
-            st.error("대진표를 생성하려면 최소 2명 이상의 참가자가 필요합니다.")
-        else:
-            shuffled_players = player_names.copy()
-            random.shuffle(shuffled_players)
-            
-            matches = []
-            for i in range(0, len(shuffled_players), 2):
-                p1 = shuffled_players[i]
-                p2 = shuffled_players[i+1] if i+1 < len(shuffled_players) else "부전승 (Bye)"
-                matches.append((p1, p2))
-                
-            st.session_state['matches'] = matches
-            st.success("대진표 생성이 완료되었습니다!")
-            st.balloons()
+        # 참가자 명단에 부전승(Bye) 추가 후 섞기
+        padded_players = player_names.copy() + ["부전승 (Bye)"] * num_byes
+        random.shuffle(padded_players)
+        
+        # 2명씩 매칭
+        matches = [(padded_players[i], padded_players[i+1]) for i in range(0, len(padded_players), 2)]
+        st.session_state['matches'] = matches
+        st.session_state['bracket_size'] = next_pow2
+        st.success("대진표 추첨이 완료되었습니다!")
+        st.balloons()
 
-# ── [섹션 3] 매치업 카드 뷰 (와이드 화면 최적화) ──
-if st.session_state['matches']:
-    st.markdown("### ⚔️ 공식 매치업")
-    
+# ── [섹션 2] 트리형 대진표 시각화 (A블록 / B블록 분리) ──
+if 'matches' in st.session_state and st.session_state['matches']:
     matches = st.session_state['matches']
+    half_idx = len(matches) // 2
     
-    # 한 줄에 4개의 매치업 카드를 꽉 채워서 배치 (와이드 레이아웃 최적화)
-    cols = st.columns(4)
+    # 대진표를 좌/우 블록으로 나누어 결승전으로 올라가는 구조 연출
+    col_A, col_B = st.columns(2)
     
-    for idx, match in enumerate(matches):
-        col_idx = idx % 4
-        with cols[col_idx]:
-            # Streamlit 컨테이너에 테두리를 주어 게임 매치업 카드 느낌 연출
+    with col_A:
+        st.markdown(f"<h3 style='text-align: center; color: #38bdf8;'>🟦 A 블록 (결승 진출자 1명 배출)</h3>", unsafe_allow_html=True)
+        # A블록 매치업 출력
+        for idx in range(half_idx):
+            match = matches[idx]
             with st.container(border=True):
-                st.caption(f"Match {idx + 1}")
-                st.markdown(f"<h4 style='text-align: center; color: #38bdf8;'>{match[0]}</h4>", unsafe_allow_html=True)
-                st.markdown("<p style='text-align: center; font-weight: bold; color: #64748b;'>VS</p>", unsafe_allow_html=True)
+                st.caption(f"🏁 {next_pow2}강 - {idx + 1}경기")
                 
-                if match[1] == "부전승 (Bye)":
-                    st.markdown(f"<h4 style='text-align: center; color: #64748b;'>{match[1]}</h4>", unsafe_allow_html=True)
-                else:
-                    st.markdown(f"<h4 style='text-align: center; color: #f43f5e;'>{match[1]}</h4>", unsafe_allow_html=True)
+                # 부전승이 포함된 경기 시각적 강조
+                p1_color = "#64748b" if match[0] == "부전승 (Bye)" else "#e2e8f0"
+                p2_color = "#64748b" if match[1] == "부전승 (Bye)" else "#e2e8f0"
+                
+                st.markdown(f"""
+                <div style='display: flex; justify-content: space-between; align-items: center; padding: 10px;'>
+                    <div style='font-size: 18px; font-weight: bold; color: {p1_color}; width: 40%; text-align: right;'>{match[0]}</div>
+                    <div style='font-size: 14px; color: #f43f5e; font-weight: 900;'>VS</div>
+                    <div style='font-size: 18px; font-weight: bold; color: {p2_color}; width: 40%; text-align: left;'>{match[1]}</div>
+                </div>
+                """, unsafe_allow_html=True)
+
+    with col_B:
+        st.markdown(f"<h3 style='text-align: center; color: #fbbf24;'>🟨 B 블록 (결승 진출자 1명 배출)</h3>", unsafe_allow_html=True)
+        # B블록 매치업 출력
+        for idx in range(half_idx, len(matches)):
+            match = matches[idx]
+            with st.container(border=True):
+                st.caption(f"🏁 {next_pow2}강 - {idx + 1}경기")
+                
+                p1_color = "#64748b" if match[0] == "부전승 (Bye)" else "#e2e8f0"
+                p2_color = "#64748b" if match[1] == "부전승 (Bye)" else "#e2e8f0"
+                
+                st.markdown(f"""
+                <div style='display: flex; justify-content: space-between; align-items: center; padding: 10px;'>
+                    <div style='font-size: 18px; font-weight: bold; color: {p1_color}; width: 40%; text-align: right;'>{match[0]}</div>
+                    <div style='font-size: 14px; color: #f43f5e; font-weight: 900;'>VS</div>
+                    <div style='font-size: 18px; font-weight: bold; color: {p2_color}; width: 40%; text-align: left;'>{match[1]}</div>
+                </div>
+                """, unsafe_allow_html=True)
+                
+    st.divider()
+    st.markdown("<h4 style='text-align: center;'>⚔️ A블록 우승자  VS  B블록 우승자 ⚔️</h4>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center; color: #64748b;'>대망의 결승전</p>", unsafe_allow_html=True)
