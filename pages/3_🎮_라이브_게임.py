@@ -9,11 +9,14 @@ st.set_page_config(page_title="라이브 게임 중계", page_icon="🎮", layou
 global_db = get_global_db()
 
 # 세션 상태 초기화
+from pathlib import Path
+html_file = Path("static/cyber_duel_tetris_v7.html")
+
 if 'player_auth' not in st.session_state: st.session_state['player_auth'] = False
 if 'spectator_profile' not in st.session_state: st.session_state['spectator_profile'] = None
 st.link_button(
     "테트리스 직접 열기",
-    "static/cyber_duel_tetris_v7.html"
+    html_file
 )
 
 from pathlib import Path
