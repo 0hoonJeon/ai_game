@@ -16,7 +16,7 @@ if 'player_auth' not in st.session_state: st.session_state['player_auth'] = Fals
 if 'spectator_profile' not in st.session_state: st.session_state['spectator_profile'] = None
 st.link_button(
     "테트리스 직접 열기",
-    "./static/cyber_duel_tetris_v7.html"
+    "/app/static/cyber_duel_tetris_v7.html"
 )
 
 from pathlib import Path
