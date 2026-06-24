@@ -14,17 +14,8 @@ global_db = get_global_db()
 
 if 'player_auth' not in st.session_state: st.session_state['player_auth'] = False
 if 'spectator_profile' not in st.session_state: st.session_state['spectator_profile'] = None
-st.link_button(
-    "테트리스 직접 열기",
-    "/app/static/cyber_duel_tetris_v7.html"
-)
 
-from pathlib import Path
-import streamlit as st
 
-st.write("cwd:", Path.cwd())
-st.write("static exists:", Path("static").exists())
-st.write("tetris exists:", Path("static/tetris.html").exists())
 
 st.title("🎮 라이브 게임 경기장")
 st.markdown("선수는 인증 후 조작 가능하며, 관전자는 응원 팀을 선택해 채팅에 참여합니다.")
