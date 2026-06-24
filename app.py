@@ -1,6 +1,6 @@
 import streamlit as st
 
-st.set_page_config(page_title="사이버 듀얼 토너먼트 플랫폼", page_icon="🏆", layout="centered")
+st.set_page_config(page_title="사이버 듀얼 토너먼트 플랫폼", page_icon="🏆", layout="wide")
 
 st.title("🏆 제 1회 사이버 듀얼 테트리스 챔피언십")
 st.image("https://images.unsplash.com/photo-1550745165-9bc0b252726f?q=80&w=1200&auto=format&fit=crop", caption="Welcome to the Arena")
