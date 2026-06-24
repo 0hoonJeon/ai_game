@@ -34,7 +34,17 @@ if mode == "🎮 대회 선수 (인증 필요)":
     else:
         st.success("✅ 선수 인증 완료! 컨트롤 권한 부여됨.")
         # 정적 폴더의 테트리스 게임 렌더링
-        components.iframe("/app/static/tetris.html", height=800, scrolling=False)
+        # components.iframe("/app/static/tetris.html", height=800, scrolling=False)
+        st.markdown(
+		    """
+		    <iframe
+		        src="/static/tetris.html"
+		        width="100%"
+		        height="700"
+		    ></iframe>
+		    """,
+		    unsafe_allow_html=True
+		)
 
 # ── [2. 관전 및 채팅 모드] ──
 elif mode == "👀 관전 및 응원 모드":
