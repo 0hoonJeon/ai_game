@@ -1,0 +1,1464 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cyber-Duel Tetris</title>
+    <link href="https://api.fontshare.com/v2/css?f[]=cabinet-grotesk@400,700,900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg:       #0d0f1a;
+            --surface:  #141726;
+            --surface2: #1c2035;
+            --border:   #2a3050;
+            --accent:   #38bdf8;
+            --accent2:  #818cf8;
+            --danger:   #f43f5e;
+            --gold:     #fbbf24;
+            --green:    #34d399;
+            --text:     #e2e8f0;
+            --muted:    #64748b;
+            --font:     'Cabinet Grotesk', 'Segoe UI', sans-serif;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: var(--font);
+            background: var(--bg);
+            color: var(--text);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        /* ── HEADER ── */
+        header {
+            width: 100%;
+            padding: 12px 28px;
+            border-bottom: 1px solid var(--border);
+            background: linear-gradient(90deg, #0d0f1a 0%, #141726 100%);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 20px rgba(56,189,248,0.08);
+        }
+        .logo {
+            font-size: 22px;
+            font-weight: 900;
+            letter-spacing: 2px;
+            background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-transform: uppercase;
+        }
+        #userInfo { font-size: 11px; color: var(--muted); font-family: monospace; }
+
+        /* ── LOADING ── */
+        #loadingScreen {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            color: var(--accent);
+            letter-spacing: 1px;
+        }
+
+        /* ── LOBBY ── */
+        #lobbyScreen {
+            width: 100%;
+            max-width: 720px;
+            margin-top: 36px;
+            padding: 28px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            box-shadow: 0 0 40px rgba(56,189,248,0.07);
+        }
+        #lobbyScreen h2 { font-size: 20px; font-weight: 700; color: var(--accent); margin-bottom: 4px; }
+        #lobbyScreen p  { font-size: 13px; color: var(--muted); }
+        .lobby-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+        .lobby-create { display: flex; gap: 10px; }
+        input[type="text"] {
+            padding: 10px 14px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text);
+            font-family: var(--font);
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.2s;
+            width: 220px;
+        }
+        input[type="text"]:focus { border-color: var(--accent); }
+        input[type="text"]::placeholder { color: var(--muted); }
+        .btn { cursor: pointer; font-family: var(--font); font-weight: 700; border: none; border-radius: 8px; padding: 10px 20px; font-size: 14px; transition: all 0.18s; }
+        .btn-primary { background: var(--accent); color: #0d0f1a; box-shadow: 0 0 12px rgba(56,189,248,0.3); }
+        .btn-primary:hover { background: #7dd3fc; transform: translateY(-1px); }
+        .btn-danger  { background: var(--danger); color: #fff; }
+        .btn-danger:hover  { background: #fb7185; }
+        .btn-ghost   { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+        .btn-ghost:hover   { border-color: var(--accent); color: var(--accent); }
+        .btn-join    { background: var(--accent2); color: #fff; }
+        .btn-join:hover    { background: #a5b4fc; }
+        .room-item { display: flex; justify-content: space-between; align-items: center; padding: 14px 16px; background: var(--surface2); border-radius: 10px; border: 1px solid var(--border); margin-bottom: 8px; }
+        .badge { display: inline-block; font-size: 11px; padding: 3px 10px; border-radius: 99px; font-weight: 700; }
+        .badge-wait { background: rgba(52,211,153,0.12); color: var(--green); }
+        .badge-play { background: rgba(244,63,94,0.12); color: var(--danger); }
+        .rules-box { margin-top: 20px; padding: 16px; background: var(--bg); border-radius: 10px; border: 1px solid var(--border); font-size: 13px; color: var(--muted); }
+        .rules-box h3 { color: var(--accent); margin-bottom: 8px; font-size: 14px; }
+        .rules-box li { margin-bottom: 4px; padding-left: 14px; position: relative; }
+        .rules-box li::before { content: '▸'; position: absolute; left: 0; color: var(--accent2); }
+        .empty-rooms { text-align: center; padding: 32px; color: var(--muted); border: 1px dashed var(--border); border-radius: 10px; }
+
+        /* ── GAME SCREEN ── */
+        #gameScreen {
+            width: 100%;
+            max-width: 900px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 10px 12px 8px;
+        }
+        .game-topbar {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 14px;
+            padding: 10px 18px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+        }
+        .player-label { font-size: 16px; font-weight: 700; }
+        .label-me  { color: var(--accent); }
+        .label-opp { color: var(--accent2); }
+        #gameStatus { font-size: 16px; font-weight: 700; color: var(--gold); letter-spacing: 1px; }
+        .boards-row { display: flex; gap: 28px; align-items: flex-start; position: relative; }
+        .board-wrap { position: relative; }
+        canvas {
+            display: block;
+            background: var(--bg);
+            border: 1.5px solid var(--border);
+            border-radius: 6px;
+            image-rendering: pixelated;
+            box-shadow: 0 0 24px rgba(0,0,0,0.5);
+        }
+        .my-canvas { border-color: var(--accent); box-shadow: 0 0 20px rgba(56,189,248,0.25); }
+        .overlay {
+            position: absolute; inset: 0;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 28px; font-weight: 900; letter-spacing: 2px;
+            border-radius: 6px;
+        }
+        .overlay-win  { background: rgba(52,211,153,0.18); color: var(--green); border: 2px solid var(--green); text-shadow: 0 0 20px var(--green); }
+        .overlay-lose { background: rgba(244,63,94,0.18); color: var(--danger); border: 2px solid var(--danger); text-shadow: 0 0 20px var(--danger); }
+        .overlay-wait { background: rgba(13,15,26,0.85); color: var(--muted); border: 1px dashed var(--border); font-size: 15px; }
+        .vs-divider {
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            width: 36px; align-self: stretch; position: relative;
+        }
+        .vs-divider::before { content: ''; position: absolute; top: 0; bottom: 0; left: 50%; width: 1px; background: var(--border); }
+        .vs-badge {
+            background: var(--surface2); border: 1.5px solid var(--border);
+            border-radius: 50%; width: 32px; height: 32px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 11px; font-weight: 700; color: var(--muted); z-index: 1;
+        }
+        .hidden { display: none !important; }
+        .btn-leave { margin-top: 14px; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <span class="logo">⚡ Cyber-Duel Tetris</span>
+        <div id="userInfo">인증 중...</div>
+    </header>
+
+    <div id="loadingScreen">게임 시스템 초기화 중...</div>
+
+    <div id="lobbyScreen" class="hidden">
+        <div class="lobby-top">
+            <div>
+                <h2>접속 가능한 게임 방</h2>
+                <p>동일 URL 접속자간 매칭됩니다.</p>
+            </div>
+            <div class="lobby-create">
+                <input type="text" id="roomTitleInput" placeholder="방 제목 입력..." maxlength="20">
+                <button id="btnCreateRoom" class="btn btn-primary">+ 방 만들기</button>
+            </div>
+        </div>
+        <div id="roomList"></div>
+        <div class="rules-box">
+            <h3>📖 조작 방법 및 룰</h3>
+            <ul style="list-style:none">
+                <li>방향키 좌/우/아래: 이동 &nbsp;|&nbsp; 방향키 위: 회전 &nbsp;|&nbsp; 스페이스바: 단번에 내리기</li>
+                <li>줄을 지우면 상대방의 바닥에서 회색 방해 블록이 올라옵니다.</li>
+                <li>💣 폭탄 블록이 포함된 줄 완성 → 폭발! 인접 3줄이 상대방에게 전달됩니다.</li>
+                <li>✈️ 비행기 아이템이 포함된 줄 완성 → 전투기가 광선으로 줄을 삭제합니다.</li>
+            </ul>
+        </div>
+    </div>
+
+    <div id="gameScreen" class="hidden">
+        <div class="game-topbar">
+            <div class="player-label label-me">당신<span id="myRole" style="font-size:12px;font-weight:400;color:var(--muted)"></span></div>
+            <div id="gameStatus">상대방을 기다리는 중...</div>
+            <div class="player-label label-opp">상대방<span id="oppRole" style="font-size:12px;font-weight:400;color:var(--muted)"></span></div>
+        </div>
+
+        <div class="boards-row">
+            <div class="board-wrap">
+                <canvas id="myCanvas" width="240" height="480" class="my-canvas" style="max-width:100%;"></canvas>
+                <div id="myOverlay" class="overlay hidden"></div>
+            </div>
+
+            <div class="vs-divider">
+                <div class="vs-badge">VS</div>
+            </div>
+
+            <div class="board-wrap" style="opacity:0.85">
+                <canvas id="oppCanvas" width="240" height="480" style="max-width:100%;"></canvas>
+                <div id="oppOverlay" class="overlay overlay-wait">Waiting...</div>
+            </div>
+        </div>
+
+        <div style="display:flex;gap:10px;margin-top:14px;">
+            <button id="btnNewGame" class="btn btn-ghost">🔄 새게임</button>
+            <button id="btnLeaveRoom" class="btn btn-danger">방 나가기</button>
+        </div>
+    </div>
+
+    <!-- Airplane canvas overlay (rendered above game board) -->
+    <canvas id="planeCanvas"    style="display:none;position:fixed;pointer-events:none;z-index:100;image-rendering:pixelated;"></canvas>
+    <canvas id="oppPlaneCanvas" style="display:none;position:fixed;pointer-events:none;z-index:100;image-rendering:pixelated;"></canvas>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, doc, setDoc, onSnapshot, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const firebaseConfig = {	
+            apiKey: "AIzaSyACaEsIaxA8MMo3qs7wJ18OoBuHBVKfE9Q",
+            authDomain: "battle-tetris-5842e.firebaseapp.com",
+            projectId: "battle-tetris-5842e",
+            storageBucket: "battle-tetris-5842e.firebasestorage.app",
+            messagingSenderId: "628854407123",
+            appId: "1:628854407123:web:4f2d02076746c3e77a3926"
+        };
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const appId = 'cyber-duel-tetris-local';
+
+        const COLS = 10, ROWS = 20;
+        let BS = 24; // 동적으로 계산됨
+
+        function calcBS() {
+            const headerH = document.querySelector('header').offsetHeight;
+            const topbarH = 60; // game-topbar 예상 높이
+            const btnH    = 52; // 버튼 영역
+            const padV    = 40; // 상하 여백
+            const availH  = window.innerHeight - headerH - topbarH - btnH - padV;
+            const fromH   = Math.floor(availH / ROWS);
+
+            // 캔버스 두 개 + VS divider(36px) + gap(28px*2) 를 가로 너비에도 맞춤
+            const availW  = Math.min(window.innerWidth - 32, 900);
+            const fromW   = Math.floor((availW - 36 - 56) / (COLS * 2)); // 두 보드
+
+            BS = Math.max(16, Math.min(fromH, fromW, 32));
+        }
+
+        function resizeCanvases() {
+            calcBS();
+            const W = COLS * BS, H = ROWS * BS;
+            myCanvas.width  = W; myCanvas.height  = H;
+            oppCanvas.width = W; oppCanvas.height = H;
+            // 활성 비행기 캔버스 위치 재조정
+            if(planeCanvas.style.display !== 'none') {
+                const r = myCanvas.getBoundingClientRect();
+                planeCanvas.style.left=r.left+'px'; planeCanvas.style.top=r.top+'px';
+                planeCanvas.style.width=r.width+'px'; planeCanvas.style.height=r.height+'px';
+            }
+            if(oppPlaneCanvas.style.display !== 'none') {
+                const r = oppCanvas.getBoundingClientRect();
+                oppPlaneCanvas.style.left=r.left+'px'; oppPlaneCanvas.style.top=r.top+'px';
+                oppPlaneCanvas.style.width=r.width+'px'; oppPlaneCanvas.style.height=r.height+'px';
+            }
+            // 폭발 파티클 크기도 캔버스 크기에 맞추기 위해 재저장
+            drawBoard(myCtx,  myGrid,  isPlaying ? piece : null);
+            drawBoard(oppCtx, oppGrid);
+        }
+
+        // ────────────────────────────────────────────────
+        //  PIECE DEFINITIONS
+        //  새 타입: 'B' = 폭탄, 'P' = 비행기(plane)
+        // ────────────────────────────────────────────────
+        const TETROMINOES = {
+            0:   { shape: [[0]], color: null },
+            'I': { shape: [[1,1,1,1]], color: '#38bdf8' },
+            'O': { shape: [[1,1],[1,1]], color: '#fbbf24' },
+            'T': { shape: [[0,1,0],[1,1,1]], color: '#818cf8' },
+            'L': { shape: [[0,0,1],[1,1,1]], color: '#fb923c' },
+            'G': { shape: [[1]], color: '#374151' },   // 방해 블록
+            // 특수: 폭탄이 포함된 T 피스
+            'BT':{ shape: [[0,1,0],[1,1,1]], color: '#818cf8', hasBomb: true, bombPos: [0,1] },
+            // 특수: 비행기가 포함된 L 피스
+            'PL':{ shape: [[0,0,1],[1,1,1]], color: '#fb923c', hasPlane: true, planePos: [0,2] },
+        };
+
+        // 일반 피스 5개 + 특수 피스 2개(낮은 확률)
+        const PIECE_POOL = ['I','O','T','L','I','O','T','L','I','T','L','BT','PL'];
+
+        let currentUser = null, currentRoom = null;
+        let roomsSnapshotUnsubscribe = null, roomSnapshotUnsubscribe = null;
+        let myGrid = createEmptyGrid(), oppGrid = createEmptyGrid();
+        let piece = null, animationFrameId = null, lastDropTime = 0;
+        const dropInterval = 800;
+        let isPlaying = false, handledGarbage = 0;
+
+        // 폭탄 셀 추적 (grid 좌표 → 'B')
+        // 비행기 셀 추적 (grid 좌표 → 'P')
+        // 실제 grid에 문자열 타입을 저장: 'BT', 'PL', 'I', 'O', 'T', 'L', 'G', 0
+
+        const loadingScreen = document.getElementById('loadingScreen');
+        const lobbyScreen   = document.getElementById('lobbyScreen');
+        const gameScreen    = document.getElementById('gameScreen');
+        const myCanvas      = document.getElementById('myCanvas');
+        const oppCanvas     = document.getElementById('oppCanvas');
+        const myCtx         = myCanvas.getContext('2d');
+        const oppCtx        = oppCanvas.getContext('2d');
+        const planeCanvas   = document.getElementById('planeCanvas');
+        const planeCtx      = planeCanvas.getContext('2d');
+        const oppPlaneCanvas = document.getElementById('oppPlaneCanvas');
+        const oppPlaneCtx    = oppPlaneCanvas.getContext('2d');
+
+        // ────────── AIRPLANE EFFECT STATE ──────────
+        let planeAnim    = null; // 내 보드 비행기: { x, y, dir, shotCols, shotsFired, shotTimer, bullets, allShotsDone, done }
+        let oppPlaneAnim = null; // 상대 보드 비행기 (시각 전용, 그리드 삭제 없음)
+        let handledPlaneEvent = 0; // 상대방 비행기 이벤트 카운터
+
+        // ────────── AUDIO ──────────
+        class AudioEngine {
+            constructor() {
+                this.ctx = null; this.isPlaying = false; this.timeoutIds = [];
+                this.melody = [
+                    {note:659.25,dur:400},{note:493.88,dur:200},{note:523.25,dur:200},{note:587.33,dur:400},
+                    {note:523.25,dur:200},{note:493.88,dur:200},{note:440.00,dur:400},{note:440.00,dur:200},
+                    {note:523.25,dur:200},{note:659.25,dur:400},{note:587.33,dur:200},{note:523.25,dur:200},
+                    {note:493.88,dur:600},{note:523.25,dur:200},{note:587.33,dur:400},{note:659.25,dur:400},
+                    {note:523.25,dur:400},{note:440.00,dur:400},{note:440.00,dur:800}
+                ];
+            }
+            init() { if(!this.ctx) this.ctx=new(window.AudioContext||window.webkitAudioContext)(); if(this.ctx.state==='suspended') this.ctx.resume(); }
+            playBGM() { if(this.isPlaying) return; this.init(); this.isPlaying=true; this.playMelodyLoop(); }
+            stopBGM() { this.isPlaying=false; this.timeoutIds.forEach(clearTimeout); this.timeoutIds=[]; }
+            playMelodyLoop(index=0) {
+                if(!this.isPlaying||!this.ctx) return;
+                const n=this.melody[index];
+                this.playTone(n.note,'square',n.dur/1000,0.04);
+                const id=setTimeout(()=>this.playMelodyLoop((index+1)%this.melody.length),n.dur);
+                this.timeoutIds.push(id);
+            }
+            playTone(freq,type,duration,vol) {
+                if(!this.ctx) return;
+                const osc=this.ctx.createOscillator(), gain=this.ctx.createGain();
+                osc.type=type; osc.frequency.setValueAtTime(freq,this.ctx.currentTime);
+                gain.gain.setValueAtTime(vol,this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001,this.ctx.currentTime+duration);
+                osc.connect(gain); gain.connect(this.ctx.destination); osc.start(); osc.stop(this.ctx.currentTime+duration);
+            }
+            playAttackSound() {
+                this.init();
+                const osc=this.ctx.createOscillator(), gain=this.ctx.createGain();
+                osc.type='sawtooth'; osc.frequency.setValueAtTime(800,this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(100,this.ctx.currentTime+0.3);
+                gain.gain.setValueAtTime(0.2,this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001,this.ctx.currentTime+0.3);
+                osc.connect(gain); gain.connect(this.ctx.destination); osc.start(); osc.stop(this.ctx.currentTime+0.3);
+            }
+            playLaserSound() {
+                this.init();
+                const osc=this.ctx.createOscillator(), gain=this.ctx.createGain();
+                osc.type='sine'; osc.frequency.setValueAtTime(900,this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(200,this.ctx.currentTime+0.4);
+                gain.gain.setValueAtTime(0.15,this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001,this.ctx.currentTime+0.4);
+                osc.connect(gain); gain.connect(this.ctx.destination); osc.start(); osc.stop(this.ctx.currentTime+0.4);
+            }
+            // 갤러그식 짧은 레이저 발사음
+            playGalagaShot() {
+                this.init();
+                const t = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator(), gain = this.ctx.createGain();
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(1200, t);
+                osc.frequency.exponentialRampToValueAtTime(400, t + 0.12);
+                gain.gain.setValueAtTime(0.18, t);
+                gain.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
+                osc.connect(gain); gain.connect(this.ctx.destination);
+                osc.start(t); osc.stop(t + 0.12);
+            }
+            // 비행기 등장 사운드 (엔진 굉음 + 스쳐지나가는 도플러 효과)
+            playPlaneAppear() {
+                this.init();
+                const t = this.ctx.currentTime;
+                // 엔진 노이즈
+                const buf = this.ctx.createBuffer(1, this.ctx.sampleRate * 0.8, this.ctx.sampleRate);
+                const d = buf.getChannelData(0);
+                for(let i=0;i<d.length;i++) d[i] = Math.random()*2-1;
+                const src = this.ctx.createBufferSource();
+                const filter = this.ctx.createBiquadFilter();
+                filter.type = 'bandpass'; filter.frequency.value = 600; filter.Q.value = 0.8;
+                const gNoise = this.ctx.createGain();
+                src.buffer = buf;
+                gNoise.gain.setValueAtTime(0.0, t);
+                gNoise.gain.linearRampToValueAtTime(0.22, t+0.15);
+                gNoise.gain.linearRampToValueAtTime(0.18, t+0.5);
+                gNoise.gain.exponentialRampToValueAtTime(0.001, t+0.8);
+                src.connect(filter); filter.connect(gNoise); gNoise.connect(this.ctx.destination);
+                src.start(t); src.stop(t+0.8);
+                // 도플러 톤 (고음→저음)
+                const osc = this.ctx.createOscillator(), gOsc = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(520, t);
+                osc.frequency.exponentialRampToValueAtTime(180, t+0.7);
+                gOsc.gain.setValueAtTime(0.0, t);
+                gOsc.gain.linearRampToValueAtTime(0.12, t+0.1);
+                gOsc.gain.exponentialRampToValueAtTime(0.001, t+0.7);
+                osc.connect(gOsc); gOsc.connect(this.ctx.destination);
+                osc.start(t); osc.stop(t+0.7);
+            }
+            // 폭탄 폭발 강화 사운드 (묵직한 폭발음 + 파열음)
+            playBombExplode() {
+                this.init();
+                const t = this.ctx.currentTime;
+                // 저음 폭발 베이스
+                const osc1 = this.ctx.createOscillator(), g1 = this.ctx.createGain();
+                osc1.type = 'sine';
+                osc1.frequency.setValueAtTime(80, t);
+                osc1.frequency.exponentialRampToValueAtTime(25, t+0.6);
+                g1.gain.setValueAtTime(0.55, t);
+                g1.gain.exponentialRampToValueAtTime(0.001, t+0.6);
+                osc1.connect(g1); g1.connect(this.ctx.destination);
+                osc1.start(t); osc1.stop(t+0.6);
+                // 중음 디스토션
+                const osc2 = this.ctx.createOscillator(), g2 = this.ctx.createGain();
+                osc2.type = 'sawtooth';
+                osc2.frequency.setValueAtTime(200, t);
+                osc2.frequency.exponentialRampToValueAtTime(50, t+0.45);
+                g2.gain.setValueAtTime(0.3, t);
+                g2.gain.exponentialRampToValueAtTime(0.001, t+0.45);
+                osc2.connect(g2); g2.connect(this.ctx.destination);
+                osc2.start(t); osc2.stop(t+0.45);
+                // 노이즈 버스트 (큰 충격파)
+                const bufLen = this.ctx.sampleRate * 0.5;
+                const nBuf = this.ctx.createBuffer(1, bufLen, this.ctx.sampleRate);
+                const nd = nBuf.getChannelData(0);
+                for(let i=0;i<nd.length;i++) nd[i] = (Math.random()*2-1) * Math.pow(1-i/bufLen, 1.5);
+                const nSrc = this.ctx.createBufferSource(), gN = this.ctx.createGain();
+                const lpf = this.ctx.createBiquadFilter();
+                lpf.type='lowpass'; lpf.frequency.value=1800;
+                nSrc.buffer = nBuf;
+                gN.gain.setValueAtTime(0.5, t);
+                gN.gain.exponentialRampToValueAtTime(0.001, t+0.5);
+                nSrc.connect(lpf); lpf.connect(gN); gN.connect(this.ctx.destination);
+                nSrc.start(t); nSrc.stop(t+0.5);
+                // 고음 금속 충격음
+                const osc3 = this.ctx.createOscillator(), g3 = this.ctx.createGain();
+                osc3.type = 'square';
+                osc3.frequency.setValueAtTime(600, t);
+                osc3.frequency.exponentialRampToValueAtTime(100, t+0.15);
+                g3.gain.setValueAtTime(0.2, t);
+                g3.gain.exponentialRampToValueAtTime(0.001, t+0.15);
+                osc3.connect(g3); g3.connect(this.ctx.destination);
+                osc3.start(t); osc3.stop(t+0.15);
+            }
+        }
+        const audio = new AudioEngine();
+
+        // ────────── HELPERS ──────────
+        function createEmptyGrid() {
+            return Array.from({length:ROWS}, ()=>Array(COLS).fill(0));
+        }
+        function randomPiece() {
+            return PIECE_POOL[Math.floor(Math.random()*PIECE_POOL.length)];
+        }
+        function showScreen(id) {
+            [loadingScreen,lobbyScreen,gameScreen].forEach(s=>s.classList.add('hidden'));
+            document.getElementById(id).classList.remove('hidden');
+        }
+
+        // ────────── DRAWING ──────────
+        const COLORS = {
+            'I':'#38bdf8','O':'#fbbf24','T':'#818cf8','L':'#fb923c',
+            'G':'#374151',
+            'BT':'#818cf8', // T 피스 컬러 그대로 (폭탄 셀만 특별 처리)
+            'PL':'#fb923c', // L 피스 컬러
+            'B':'#ef4444',  // 폭탄 셀 개별 색상
+            'P':'#34d399',  // 비행기 셀 개별 색상
+        };
+
+        function drawBlock(ctx, x, y, type, special=null) {
+            if (!type || type === 0) return;
+            const px = x * BS + 1, py = y * BS + 1, s = BS - 2;
+            const color = COLORS[special || type] || '#888';
+
+            // 블록 본체 — 그라디언트 + 광택
+            const grad = ctx.createLinearGradient(px, py, px+s, py+s);
+            grad.addColorStop(0, lighten(color, 0.25));
+            grad.addColorStop(1, darken(color, 0.25));
+            ctx.fillStyle = grad;
+            ctx.beginPath();
+            roundRect(ctx, px, py, s, s, 3);
+            ctx.fill();
+
+            // 광택 하이라이트
+            ctx.fillStyle = 'rgba(255,255,255,0.18)';
+            ctx.beginPath();
+            roundRect(ctx, px+1, py+1, s*0.55, s*0.35, 2);
+            ctx.fill();
+
+            // 아이콘 렌더링 (Canvas API로 직접 그려 명확하게 표시)
+            const cx = px + s/2, cy = py + s/2;
+            const iconR = s * 0.32; // 아이콘 반지름
+
+            if (special === 'B' || type === 'B') {
+                // ── 폭탄 아이콘: 원형 몸체 + 도화선 + 불꽃 ──
+                ctx.save();
+                // 몸체 (검은 원)
+                ctx.beginPath();
+                ctx.arc(cx, cy + iconR*0.2, iconR, 0, Math.PI*2);
+                ctx.fillStyle = '#1a1a1a';
+                ctx.fill();
+                ctx.strokeStyle = '#555';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+                // 도화선 (곡선)
+                ctx.beginPath();
+                ctx.moveTo(cx + iconR*0.6, cy - iconR*0.3);
+                ctx.quadraticCurveTo(cx + iconR*1.1, cy - iconR*1.1, cx + iconR*0.3, cy - iconR*1.3);
+                ctx.strokeStyle = '#8B6914';
+                ctx.lineWidth = Math.max(1.5, s*0.06);
+                ctx.lineCap = 'round';
+                ctx.stroke();
+                // 불꽃
+                ctx.beginPath();
+                ctx.arc(cx + iconR*0.3, cy - iconR*1.4, iconR*0.25, 0, Math.PI*2);
+                ctx.fillStyle = '#ff6600';
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(cx + iconR*0.3, cy - iconR*1.5, iconR*0.15, 0, Math.PI*2);
+                ctx.fillStyle = '#ffdd00';
+                ctx.fill();
+                // 광택 (하이라이트)
+                ctx.beginPath();
+                ctx.arc(cx - iconR*0.25, cy - iconR*0.1, iconR*0.28, 0, Math.PI*2);
+                ctx.fillStyle = 'rgba(255,255,255,0.22)';
+                ctx.fill();
+                ctx.restore();
+
+            } else if (special === 'P' || type === 'P') {
+                // ── 비행기 아이콘: 미니 전투기 실루엣 ──
+                ctx.save();
+                ctx.translate(cx, cy);
+                const sc = iconR / 10;
+                ctx.scale(sc, sc);
+                // 동체
+                ctx.fillStyle = '#e2e8f0';
+                ctx.beginPath();
+                ctx.ellipse(0, 0, 10, 3.5, 0, 0, Math.PI*2);
+                ctx.fill();
+                // 날개
+                ctx.fillStyle = '#94a3b8';
+                ctx.beginPath();
+                ctx.moveTo(-3, 0); ctx.lineTo(4, -8); ctx.lineTo(6, 0); ctx.closePath();
+                ctx.fill();
+                // 꼬리
+                ctx.beginPath();
+                ctx.moveTo(-8, 0); ctx.lineTo(-10, -5); ctx.lineTo(-7, 0); ctx.closePath();
+                ctx.fill();
+                // 콕핏
+                ctx.fillStyle = '#38bdf8';
+                ctx.beginPath();
+                ctx.ellipse(5, -1, 3, 2, -0.3, 0, Math.PI*2);
+                ctx.fill();
+                // 엔진 화염
+                ctx.fillStyle = '#f97316';
+                ctx.globalAlpha = 0.9;
+                ctx.beginPath();
+                ctx.ellipse(-12, 1, 3, 1.5, 0, 0, Math.PI*2);
+                ctx.fill();
+                ctx.fillStyle = '#fbbf24';
+                ctx.beginPath();
+                ctx.ellipse(-14, 1, 1.8, 1, 0, 0, Math.PI*2);
+                ctx.fill();
+                ctx.globalAlpha = 1;
+                ctx.restore();
+            }
+        }
+
+        function lighten(hex, amt) {
+            return adjustColor(hex, amt);
+        }
+        function darken(hex, amt) {
+            return adjustColor(hex, -amt);
+        }
+        function adjustColor(hex, amt) {
+            const num = parseInt(hex.slice(1), 16);
+            const r = Math.min(255, Math.max(0, (num>>16) + Math.round(255*amt)));
+            const g = Math.min(255, Math.max(0, ((num>>8)&0xFF) + Math.round(255*amt)));
+            const b = Math.min(255, Math.max(0, (num&0xFF) + Math.round(255*amt)));
+            return `rgb(${r},${g},${b})`;
+        }
+        function roundRect(ctx, x, y, w, h, r) {
+            ctx.moveTo(x+r, y);
+            ctx.arcTo(x+w, y, x+w, y+h, r);
+            ctx.arcTo(x+w, y+h, x, y+h, r);
+            ctx.arcTo(x, y+h, x, y, r);
+            ctx.arcTo(x, y, x+w, y, r);
+            ctx.closePath();
+        }
+
+        function drawBoard(ctx, grid, currentPiece=null) {
+            // 배경
+            ctx.fillStyle = '#0d0f1a';
+            ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+
+            // 그리드 라인
+            ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+            ctx.lineWidth = 1;
+            for(let i=0;i<=COLS;i++){ctx.beginPath();ctx.moveTo(i*BS,0);ctx.lineTo(i*BS,ROWS*BS);ctx.stroke();}
+            for(let i=0;i<=ROWS;i++){ctx.beginPath();ctx.moveTo(0,i*BS);ctx.lineTo(COLS*BS,i*BS);ctx.stroke();}
+
+            // 보드 셀
+            for(let y=0;y<ROWS;y++){
+                for(let x=0;x<COLS;x++){
+                    const cell = grid[y][x];
+                    if(!cell || cell===0) continue;
+                    // 폭탄 셀 처리
+                    if(cell==='BOMB') { drawBlock(ctx,x,y,'BT','B'); continue; }
+                    if(cell==='PLANE') { drawBlock(ctx,x,y,'PL','P'); continue; }
+                    drawBlock(ctx,x,y,cell);
+                }
+            }
+
+            // 현재 피스 (고스트 먼저)
+            if(currentPiece) {
+                // 고스트
+                let ghostY = currentPiece.y;
+                while(isValidMove({...currentPiece, y:ghostY+1})) ghostY++;
+                if(ghostY !== currentPiece.y) {
+                    ctx.globalAlpha = 0.2;
+                    for(let py=0;py<currentPiece.shape.length;py++){
+                        for(let px2=0;px2<currentPiece.shape[py].length;px2++){
+                            if(currentPiece.shape[py][px2]) {
+                                drawBlock(ctx, currentPiece.x+px2, ghostY+py, currentPiece.type);
+                            }
+                        }
+                    }
+                    ctx.globalAlpha = 1;
+                }
+
+                // 실제 피스
+                const info = TETROMINOES[currentPiece.type];
+                for(let py=0;py<currentPiece.shape.length;py++){
+                    for(let px2=0;px2<currentPiece.shape[py].length;px2++){
+                        if(currentPiece.shape[py][px2]) {
+                            const isBomb  = info.hasBomb  && info.bombPos[0]===py && info.bombPos[1]===px2;
+                            const isPlane = info.hasPlane && info.planePos[0]===py && info.planePos[1]===px2;
+                            if(isBomb)       drawBlock(ctx, currentPiece.x+px2, currentPiece.y+py, currentPiece.type, 'B');
+                            else if(isPlane) drawBlock(ctx, currentPiece.x+px2, currentPiece.y+py, currentPiece.type, 'P');
+                            else             drawBlock(ctx, currentPiece.x+px2, currentPiece.y+py, currentPiece.type);
+                        }
+                    }
+                }
+            }
+        }
+
+        // ────────── PIECE LOGIC ──────────
+        function isValidMove(targetPiece, testGrid=myGrid) {
+            for(let y=0;y<targetPiece.shape.length;y++){
+                for(let x=0;x<targetPiece.shape[y].length;x++){
+                    if(targetPiece.shape[y][x]){
+                        const nx=targetPiece.x+x, ny=targetPiece.y+y;
+                        if(nx<0||nx>=COLS||ny>=ROWS) return false;
+                        if(ny>=0 && testGrid[ny][nx]!==0) return false;
+                    }
+                }
+            }
+            return true;
+        }
+
+        function lockPieceAndCheckLines() {
+            const info = TETROMINOES[piece.type];
+            let isGameOver = false;
+
+            for(let y=0;y<piece.shape.length;y++){
+                for(let x=0;x<piece.shape[y].length;x++){
+                    if(piece.shape[y][x]){
+                        if(piece.y+y < 0) { isGameOver=true; continue; }
+                        // 특수 셀 처리
+                        const isBomb  = info.hasBomb  && info.bombPos[0]===y && info.bombPos[1]===x;
+                        const isPlane = info.hasPlane && info.planePos[0]===y && info.planePos[1]===x;
+                        if(isBomb)       myGrid[piece.y+y][piece.x+x] = 'BOMB';
+                        else if(isPlane) myGrid[piece.y+y][piece.x+x] = 'PLANE';
+                        else             myGrid[piece.y+y][piece.x+x] = piece.type;
+                    }
+                }
+            }
+            if(isGameOver){ triggerGameOver(); return; }
+
+            // 완성된 줄 탐색
+            const completedRows = [];
+            for(let row=0;row<ROWS;row++){
+                if(myGrid[row].every(cell=>cell!==0)) completedRows.push(row);
+            }
+
+            if(completedRows.length > 0) {
+                let hasBomb=false, hasPlane=false, planeRow=-1;
+                for(const row of completedRows){
+                    if(myGrid[row].includes('BOMB'))  hasBomb=true;
+                    if(myGrid[row].includes('PLANE')) { hasPlane=true; planeRow=row; }
+                }
+
+                // 비행기 효과: 줄 제거 전에 먼저 애니메이션 시작 (레이저가 실제 블록에 닿도록)
+                if(hasPlane){
+                    // 비행기는 줄을 직접 삭제하지 않음 — animatePlane()에서 총알이 닿는 셀만 삭제
+                    // 완성된 줄은 제거하되, PLANE 셀이 있는 줄은 비행기 발사 후 별도 처리
+                    startPlaneAnimation();
+                    // 비행기 줄 자체는 이미 완성 줄이므로 제거 (PLANE 셀 포함)
+                }
+
+                // 줄 제거
+                let linesCleared=0;
+                const newGrid = myGrid.filter((row,i)=>{
+                    if(completedRows.includes(i)){ linesCleared++; return false; }
+                    return true;
+                });
+                while(newGrid.length<ROWS) newGrid.unshift(Array(COLS).fill(0));
+                myGrid = newGrid;
+
+                // 폭탄 효과: 인접 2줄 추가 제거 + 3줄 공격
+                if(hasBomb){
+                    audio.playBombExplode();
+                    triggerBombExplosion(completedRows);
+                    sendBombGarbageToOpponent(3);
+                } else if(linesCleared>0 && !hasPlane) {
+                    sendGarbageToOpponent(linesCleared);
+                }
+            }
+
+            syncBoardToServer();
+            spawnPiece();
+        }
+
+        function triggerBombExplosion(completedRows) {
+            // 인접 1줄 추가 삭제 (위아래)
+            const extraRows = new Set();
+            for(const row of completedRows){
+                if(row-1>=0)    extraRows.add(row-1);
+                if(row+1<ROWS)  extraRows.add(row+1);
+            }
+            // completedRows는 이미 제거됨, 그러나 이 시점에서 myGrid는 이미 압축됨
+            // → 시각적 폭발 파티클만 표시 (grid 처리는 이미 완료)
+            flashExplosion(myCtx);
+        }
+
+        function flashExplosion(ctx) {
+            let frame = 0;
+            const cW = ctx.canvas.width, cH = ctx.canvas.height;
+            const particles = [];
+            for(let i=0;i<40;i++){
+                particles.push({
+                    x: Math.random()*cW, y: Math.random()*cH,
+                    vx:(Math.random()-0.5)*8, vy:(Math.random()-0.5)*8,
+                    r:Math.random()*6+2, life:1,
+                    color: ['#ef4444','#f97316','#fbbf24','#fff'][Math.floor(Math.random()*4)]
+                });
+            }
+            function draw(){
+                if(frame>18) return;
+                for(const p of particles){
+                    ctx.globalAlpha=p.life*0.9;
+                    ctx.fillStyle=p.color;
+                    ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2); ctx.fill();
+                    p.x+=p.vx; p.y+=p.vy; p.vy+=0.3; p.life-=0.06;
+                }
+                ctx.globalAlpha=1;
+                frame++;
+                requestAnimationFrame(draw);
+            }
+            draw();
+        }
+
+        // ────────── AIRPLANE ANIMATION ──────────
+        function startPlaneAnimation() {
+            audio.playPlaneAppear();   // 비행기 등장 사운드
+            const rect = myCanvas.getBoundingClientRect();
+            const goRight = Math.random() > 0.5;
+            const startX  = goRight ? -60 : rect.width + 60;
+
+            planeCanvas.style.left   = rect.left + 'px';
+            planeCanvas.style.top    = rect.top  + 'px';
+            planeCanvas.style.width  = rect.width + 'px';
+            planeCanvas.style.height = rect.height + 'px';
+            planeCanvas.width  = rect.width;
+            planeCanvas.height = rect.height;
+            planeCanvas.style.display = 'block';
+
+            // 갤러그 방식: 총 6발, 각 레이저는 짧은 총알로 아래로 이동
+            // 발사 컬럼은 보드 전체(0~9)에서 랜덤 6개 선택
+            const shotCols = [...Array(10).keys()].sort(()=>Math.random()-0.5).slice(0, 6);
+
+            planeAnim = {
+                x: startX, y: 20, dir: goRight ? 1 : -1,
+                done: false,
+                shotCols,
+                shotsFired: 0,
+                shotTimer: 0,
+                bullets: [],
+                allShotsDone: false
+            };
+
+            // ── 상대방 화면에도 비행기 이벤트 전송 ──
+            notifyOppPlaneEvent();
+
+            animatePlane();
+        }
+
+        // 상대방에게 비행기 이벤트 알림 (카운터 증가)
+        async function notifyOppPlaneEvent() {
+            if(!isPlaying||!currentRoom) return;
+            const roomRef = doc(db,'artifacts',appId,'public','data','rooms',currentRoom.id);
+            const isP1 = currentRoom.p1===currentUser.uid;
+            // 내가 P1이면 p1PlaneEvent 증가 → 상대(P2)가 감지해서 자기 화면에 비행기 표시
+            const field = isP1 ? 'p1PlaneEvent' : 'p2PlaneEvent';
+            const cur   = isP1 ? (currentRoom.p1PlaneEvent||0) : (currentRoom.p2PlaneEvent||0);
+            try{ await updateDoc(roomRef, {[field]: cur + 1}); }catch(e){}
+        }
+
+        // 상대방 보드 위에 비행기 애니메이션 시작 (시각 전용 — 그리드 삭제 없음)
+        function startOppPlaneAnimation() {
+            const rect = oppCanvas.getBoundingClientRect();
+            const goRight = Math.random() > 0.5;
+            const startX  = goRight ? -60 : rect.width + 60;
+
+            oppPlaneCanvas.style.left   = rect.left + 'px';
+            oppPlaneCanvas.style.top    = rect.top  + 'px';
+            oppPlaneCanvas.style.width  = rect.width + 'px';
+            oppPlaneCanvas.style.height = rect.height + 'px';
+            oppPlaneCanvas.width  = rect.width;
+            oppPlaneCanvas.height = rect.height;
+            oppPlaneCanvas.style.display = 'block';
+
+            const shotCols = [...Array(10).keys()].sort(()=>Math.random()-0.5).slice(0, 6);
+
+            oppPlaneAnim = {
+                x: startX, y: 20, dir: goRight ? 1 : -1,
+                done: false,
+                shotCols,
+                shotsFired: 0,
+                shotTimer: 0,
+                bullets: [],
+                allShotsDone: false
+            };
+
+            animateOppPlane();
+        }
+
+        // 상대방 보드 비행기 애니메이션 루프 (시각 전용)
+        function animateOppPlane() {
+            if(!oppPlaneAnim || oppPlaneAnim.done) { oppPlaneCanvas.style.display='none'; return; }
+            const a = oppPlaneAnim;
+            const speed = 5;
+            a.x += speed * a.dir;
+
+            const w = oppPlaneCanvas.width, h = oppPlaneCanvas.height;
+
+            const planeOut = (a.dir>0 && a.x > w+80) || (a.dir<0 && a.x < -80);
+            if(planeOut && a.bullets.length === 0) {
+                a.done = true;
+                oppPlaneCanvas.style.display = 'none';
+                return;
+            }
+
+            oppPlaneCtx.clearRect(0, 0, w, h);
+
+            // 총알 발사
+            a.shotTimer++;
+            if(!a.allShotsDone && a.shotTimer % 18 === 0 && a.shotsFired < a.shotCols.length) {
+                const col = a.shotCols[a.shotsFired];
+                const bx = col * BS + BS / 2 + (Math.random() * 6 - 3);
+                a.bullets.push({ x: bx, y: a.y + 14, col, hit: false, speed: 7 + Math.random() * 3 });
+                a.shotsFired++;
+                if(a.shotsFired >= a.shotCols.length) a.allShotsDone = true;
+            }
+
+            // 총알 이동 + 시각적 충돌 (상대 그리드 삭제는 없음 — 서버가 이미 업데이트)
+            const toRemove = [];
+            for(let i = 0; i < a.bullets.length; i++) {
+                const b = a.bullets[i];
+                if(b.hit) { toRemove.push(i); continue; }
+
+                b.y += b.speed;
+
+                const gridRow = Math.floor(b.y / BS);
+                const gridCol = Math.floor(b.x / BS);
+
+                if(gridRow >= 0 && gridRow < ROWS && gridCol >= 0 && gridCol < COLS) {
+                    if(oppGrid[gridRow][gridCol] !== 0) {
+                        // 시각적 파티클만 — 그리드 삭제는 상대방 클라이언트가 처리
+                        spawnOppHitParticles(b.x, b.y);
+                        b.hit = true;
+                        toRemove.push(i);
+                        continue;
+                    }
+                }
+
+                if(b.y > h + 10) { toRemove.push(i); continue; }
+
+                drawGalagaBullet(oppPlaneCtx, b.x, b.y);
+            }
+            for(let i = toRemove.length-1; i >= 0; i--) {
+                a.bullets.splice(toRemove[i], 1);
+            }
+
+            updateOppHitParticles(oppPlaneCtx);
+
+            if(!planeOut) drawPlane(oppPlaneCtx, a.x, a.y, a.dir>0);
+
+            requestAnimationFrame(animateOppPlane);
+        }
+
+        // 상대방 보드용 히트 파티클
+        let oppHitParticles = [];
+        function spawnOppHitParticles(x, y) {
+            for(let i=0; i<8; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const spd   = 1.5 + Math.random() * 3;
+                oppHitParticles.push({
+                    x, y,
+                    vx: Math.cos(angle)*spd, vy: Math.sin(angle)*spd,
+                    life: 1.0,
+                    r: 2 + Math.random()*3,
+                    color: ['#ffe040','#ff8800','#ffffff','#818cf8'][Math.floor(Math.random()*4)]
+                });
+            }
+        }
+        function updateOppHitParticles(ctx) {
+            const next = [];
+            for(const p of oppHitParticles) {
+                ctx.globalAlpha = p.life * 0.9;
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.r, 0, Math.PI*2);
+                ctx.fill();
+                p.x += p.vx; p.y += p.vy; p.vy += 0.2; p.life -= 0.08;
+                if(p.life > 0) next.push(p);
+            }
+            ctx.globalAlpha = 1;
+            oppHitParticles = next;
+        }
+
+        function animatePlane() {
+            if(!planeAnim || planeAnim.done) { planeCanvas.style.display='none'; return; }
+            const a = planeAnim;
+            const speed = 5;
+            a.x += speed * a.dir;
+
+            const w = planeCanvas.width, h = planeCanvas.height;
+
+            // 비행기가 화면 밖 탈출 + 모든 총알도 소멸됐으면 종료
+            const planeOut = (a.dir>0 && a.x > w+80) || (a.dir<0 && a.x < -80);
+            if(planeOut && a.bullets.length === 0) {
+                a.done = true;
+                planeCanvas.style.display = 'none';
+                return;
+            }
+
+            planeCtx.clearRect(0, 0, w, h);
+
+            // ── 갤러그 총알 발사 (18프레임마다 1발, 총 6발) ──
+            a.shotTimer++;
+            if(!a.allShotsDone && a.shotTimer % 18 === 0 && a.shotsFired < a.shotCols.length) {
+                const col = a.shotCols[a.shotsFired];
+                const bx = col * BS + BS / 2 + (Math.random() * 6 - 3);
+                a.bullets.push({ x: bx, y: a.y + 14, col, hit: false, speed: 7 + Math.random() * 3 });
+                a.shotsFired++;
+                audio.playGalagaShot();
+                if(a.shotsFired >= a.shotCols.length) a.allShotsDone = true;
+            }
+
+            // ── 총알 이동 + 충돌 판정: 닿은 셀만 삭제 ──
+            const toRemove = [];
+            for(let i = 0; i < a.bullets.length; i++) {
+                const b = a.bullets[i];
+                if(b.hit) { toRemove.push(i); continue; }
+
+                b.y += b.speed;
+
+                // 보드 좌표로 변환해서 셀 충돌 체크
+                const gridRow = Math.floor(b.y / BS);
+                const gridCol = Math.floor(b.x / BS);
+
+                if(gridRow >= 0 && gridRow < ROWS && gridCol >= 0 && gridCol < COLS) {
+                    if(myGrid[gridRow][gridCol] !== 0) {
+                        // ── 닿은 셀만 삭제 (줄 전체 삭제 X) ──
+                        myGrid[gridRow][gridCol] = 0;
+                        syncBoardToServer();
+                        spawnHitParticles(b.x, b.y);
+                        b.hit = true;
+                        toRemove.push(i);
+                        continue;
+                    }
+                }
+
+                // 화면 아래로 벗어나면 제거
+                if(b.y > h + 10) { toRemove.push(i); continue; }
+
+                // 갤러그 스타일 짧은 레이저 총알 렌더링
+                drawGalagaBullet(planeCtx, b.x, b.y);
+            }
+            // 제거 (뒤에서부터)
+            for(let i = toRemove.length-1; i >= 0; i--) {
+                a.bullets.splice(toRemove[i], 1);
+            }
+
+            // ── 히트 파티클 업데이트 ──
+            updateHitParticles(planeCtx);
+
+            // ── 비행기 렌더 (화면 안에 있을 때만) ──
+            if(!planeOut) drawPlane(planeCtx, a.x, a.y, a.dir>0);
+
+            requestAnimationFrame(animatePlane);
+        }
+
+        // 갤러그 스타일 짧은 레이저 총알
+        function drawGalagaBullet(ctx, x, y) {
+            // 총알 몸체 (밝은 노란-흰색 짧은 막대)
+            const grad = ctx.createLinearGradient(x, y-8, x, y+2);
+            grad.addColorStop(0, 'rgba(255,255,200,0)');
+            grad.addColorStop(0.3, 'rgba(255,240,80,1)');
+            grad.addColorStop(0.7, 'rgba(255,200,50,1)');
+            grad.addColorStop(1, 'rgba(255,100,0,0.6)');
+            ctx.strokeStyle = grad;
+            ctx.lineWidth = 3;
+            ctx.shadowBlur = 8;
+            ctx.shadowColor = '#ffe040';
+            ctx.beginPath();
+            ctx.moveTo(x, y - 8);
+            ctx.lineTo(x, y + 2);
+            ctx.stroke();
+            // 중심 흰 코어
+            ctx.strokeStyle = 'rgba(255,255,255,0.95)';
+            ctx.lineWidth = 1.2;
+            ctx.shadowBlur = 4;
+            ctx.shadowColor = '#ffffff';
+            ctx.beginPath();
+            ctx.moveTo(x, y - 6);
+            ctx.lineTo(x, y);
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+        }
+
+        // 명중 파티클 풀
+        let hitParticles = [];
+        function spawnHitParticles(x, y) {
+            for(let i=0; i<8; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const spd   = 1.5 + Math.random() * 3;
+                hitParticles.push({
+                    x, y,
+                    vx: Math.cos(angle)*spd, vy: Math.sin(angle)*spd,
+                    life: 1.0,
+                    r: 2 + Math.random()*3,
+                    color: ['#ffe040','#ff8800','#ffffff','#38bdf8'][Math.floor(Math.random()*4)]
+                });
+            }
+        }
+        function updateHitParticles(ctx) {
+            const next = [];
+            for(const p of hitParticles) {
+                ctx.globalAlpha = p.life * 0.9;
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.r, 0, Math.PI*2);
+                ctx.fill();
+                p.x += p.vx; p.y += p.vy; p.vy += 0.2; p.life -= 0.08;
+                if(p.life > 0) next.push(p);
+            }
+            ctx.globalAlpha = 1;
+            hitParticles = next;
+        }
+
+        function drawPlane(ctx, x, y, facingRight) {
+            ctx.save();
+            ctx.translate(x, y);
+            if(!facingRight) ctx.scale(-1,1);
+
+            // 동체
+            ctx.fillStyle='#94a3b8';
+            ctx.beginPath();
+            ctx.ellipse(0, 0, 28, 10, 0, 0, Math.PI*2);
+            ctx.fill();
+
+            // 날개
+            ctx.fillStyle='#64748b';
+            ctx.beginPath();
+            ctx.moveTo(-10,0); ctx.lineTo(10,-22); ctx.lineTo(16,0); ctx.closePath();
+            ctx.fill();
+
+            // 꼬리
+            ctx.beginPath();
+            ctx.moveTo(-22,0); ctx.lineTo(-28,-14); ctx.lineTo(-20,0); ctx.closePath();
+            ctx.fill();
+
+            // 엔진 화염
+            ctx.fillStyle='#f97316';
+            ctx.globalAlpha=0.8;
+            ctx.beginPath(); ctx.ellipse(-30, 3, 8, 3, 0, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle='#fbbf24';
+            ctx.beginPath(); ctx.ellipse(-34, 3, 4, 2, 0, 0, Math.PI*2); ctx.fill();
+            ctx.globalAlpha=1;
+            ctx.restore();
+        }
+
+        // ────────── SPAWNING ──────────
+        function spawnPiece() {
+            const type = randomPiece();
+            piece = { type, shape: TETROMINOES[type].shape, x: 3, y: 0 };
+            if(!isValidMove(piece)) triggerGameOver();
+        }
+
+        function rotatePiece() {
+            const rotated = piece.shape[0].map((_,i)=>piece.shape.map(r=>r[i]).reverse());
+            const np = {...piece, shape:rotated};
+            if(isValidMove(np)) piece = np;
+        }
+
+        function hardDrop() {
+            while(isValidMove({...piece, y:piece.y+1})) piece.y++;
+            lockPieceAndCheckLines();
+        }
+
+        // ────────── SERVER SYNC ──────────
+        async function syncBoardToServer() {
+            if(!isPlaying||!currentRoom) return;
+            const roomRef = doc(db,'artifacts',appId,'public','data','rooms',currentRoom.id);
+            const isP1 = currentRoom.p1===currentUser.uid;
+            try{ await updateDoc(roomRef, isP1?{p1Board:JSON.stringify(myGrid)}:{p2Board:JSON.stringify(myGrid)}); }catch(e){}
+        }
+
+        async function sendGarbageToOpponent(n) {
+            if(!isPlaying||!currentRoom) return;
+            audio.playAttackSound();
+            const roomRef = doc(db,'artifacts',appId,'public','data','rooms',currentRoom.id);
+            const isP1 = currentRoom.p1===currentUser.uid;
+            const field = isP1?'linesSentToP2':'linesSentToP1';
+            const cur   = isP1?currentRoom.linesSentToP2:currentRoom.linesSentToP1;
+            try{ await updateDoc(roomRef,{[field]:cur+n}); }catch(e){}
+        }
+
+        async function sendBombGarbageToOpponent(n) {
+            if(!isPlaying||!currentRoom) return;
+            const roomRef = doc(db,'artifacts',appId,'public','data','rooms',currentRoom.id);
+            const isP1 = currentRoom.p1===currentUser.uid;
+            const field = isP1?'linesSentToP2':'linesSentToP1';
+            const cur   = isP1?currentRoom.linesSentToP2:currentRoom.linesSentToP1;
+            try{ await updateDoc(roomRef,{[field]:cur+n}); }catch(e){}
+        }
+
+        async function triggerGameOver() {
+            isPlaying=false; audio.stopBGM();
+            if(!currentRoom) return;
+            const roomRef = doc(db,'artifacts',appId,'public','data','rooms',currentRoom.id);
+            const isP1 = currentRoom.p1===currentUser.uid;
+            try{ await updateDoc(roomRef,{winner:isP1?currentRoom.p2:currentRoom.p1}); }catch(e){}
+        }
+
+        function receiveGarbage(n) {
+            if(n<=0||!isPlaying) return;
+            myGrid = myGrid.slice(n);
+            for(let i=0;i<n;i++){
+                const hole=Math.floor(Math.random()*COLS);
+                const row=Array(COLS).fill('G');
+                row[hole]=0;
+                myGrid.push(row);
+            }
+            syncBoardToServer();
+        }
+
+        // ────────── GAME LOOP ──────────
+        function gameLoop(ts) {
+            if(!isPlaying) return;
+            if(ts-lastDropTime > dropInterval){
+                const np={...piece,y:piece.y+1};
+                if(isValidMove(np)) piece=np; else lockPieceAndCheckLines();
+                lastDropTime=ts;
+            }
+            drawBoard(myCtx, myGrid, piece);
+            drawBoard(oppCtx, oppGrid);
+            animationFrameId=requestAnimationFrame(gameLoop);
+        }
+
+        document.addEventListener('keydown',(e)=>{
+            if(!isPlaying) return;
+            switch(e.key){
+                case 'ArrowLeft':  if(isValidMove({...piece,x:piece.x-1})) piece.x--; break;
+                case 'ArrowRight': if(isValidMove({...piece,x:piece.x+1})) piece.x++; break;
+                case 'ArrowDown':  if(isValidMove({...piece,y:piece.y+1})) piece.y++; break;
+                case 'ArrowUp':    rotatePiece(); break;
+                case ' ':          e.preventDefault(); hardDrop(); break;
+            }
+            if(isPlaying) drawBoard(myCtx,myGrid,piece);
+        });
+
+        // ────────── AUTH & LOBBY ──────────
+        async function initApp(){
+            try{ await signInAnonymously(auth); }
+            catch(err){ document.getElementById('loadingScreen').innerText='인증 실패. Firebase 설정을 확인하세요.'; return; }
+            onAuthStateChanged(auth,(user)=>{
+                if(user){ currentUser=user; document.getElementById('userInfo').innerText=`UID: ${user.uid.substring(0,8)}`; listenToRooms(); showScreen('lobbyScreen'); }
+            });
+        }
+
+        function listenToRooms(){
+            const ref=collection(db,'artifacts',appId,'public','data','rooms');
+            roomsSnapshotUnsubscribe=onSnapshot(ref,(snap)=>{
+                renderLobby(snap.docs.map(d=>({id:d.id,...d.data()})));
+            });
+        }
+
+        function renderLobby(rooms){
+            const listDiv=document.getElementById('roomList');
+            listDiv.innerHTML='';
+            if(!rooms.length){ listDiv.innerHTML='<div class="empty-rooms">현재 개설된 방이 없습니다.</div>'; return; }
+            rooms.forEach(room=>{
+                const isMyRoom=room.p1===currentUser.uid;
+                const badge=room.status==='waiting'
+                    ?'<span class="badge badge-wait">대기 중</span>'
+                    :'<span class="badge badge-play">진행 중</span>';
+                let btns='';
+                if(room.status==='waiting'&&!isMyRoom){
+                    btns=`<button onclick="joinRoom('${room.id}')" class="btn btn-join">참여하기</button>`;
+                } else if(isMyRoom){
+                    btns=`<div style="display:flex;gap:8px"><span class="btn btn-ghost" style="cursor:default">내 방</span><button onclick="deleteRoomDirect('${room.id}')" class="btn btn-danger">삭제</button></div>`;
+                } else {
+                    btns=`<button disabled class="btn btn-ghost" style="opacity:0.4;cursor:not-allowed">참여불가</button>`;
+                }
+                listDiv.innerHTML+=`<div class="room-item"><div><span style="font-weight:700;margin-right:8px">${room.title||'이름 없는 방'}</span><span style="font-size:11px;color:var(--muted);margin-right:8px">(ID:${room.id})</span>${badge}</div>${btns}</div>`;
+            });
+        }
+
+        window.deleteRoomDirect=async(roomId)=>{
+            if(!confirm('정말 이 방을 삭제하시겠습니까?')) return;
+            try{ await deleteDoc(doc(db,'artifacts',appId,'public','data','rooms',roomId)); alert('방이 삭제되었습니다.'); }
+            catch(e){ alert('삭제 실패: '+e.message); }
+        };
+
+        async function createRoom(){
+            if(!currentUser){ alert('로그인 정보가 없습니다.'); return; }
+            const title=(document.getElementById('roomTitleInput').value.trim())||`${currentUser.uid.substring(0,4)}님의 방`;
+            try{
+                const roomId=Math.random().toString(36).substring(2,8);
+                const roomRef=doc(db,'artifacts',appId,'public','data','rooms',roomId);
+                await setDoc(roomRef,{
+                    id:roomId, title, status:'waiting', p1:currentUser.uid, p2:null,
+                    p1Board:JSON.stringify(createEmptyGrid()), p2Board:JSON.stringify(createEmptyGrid()),
+                    linesSentToP1:0, linesSentToP2:0, winner:null,
+                    p1NewGame:false, p2NewGame:false,
+                    p1PlaneEvent:0, p2PlaneEvent:0
+                });
+                document.getElementById('roomTitleInput').value='';
+                enterRoom(roomId);
+            }catch(e){ alert('방 생성 실패!\n\n'+e.message); }
+        }
+
+        window.joinRoom=async(roomId)=>{
+            if(!currentUser) return;
+            audio.init();
+            await updateDoc(doc(db,'artifacts',appId,'public','data','rooms',roomId),{p2:currentUser.uid,status:'playing'});
+            enterRoom(roomId);
+        };
+
+        function enterRoom(roomId){
+            showScreen('gameScreen');
+            resizeCanvases();
+            myGrid=createEmptyGrid(); oppGrid=createEmptyGrid();
+            handledGarbage=0; handledPlaneEvent=0; isPlaying=false;
+            planeAnim=null; oppPlaneAnim=null;
+            document.getElementById('myOverlay').classList.add('hidden');
+            if(roomSnapshotUnsubscribe) roomSnapshotUnsubscribe();
+            const ref=doc(db,'artifacts',appId,'public','data','rooms',roomId);
+            roomSnapshotUnsubscribe=onSnapshot(ref,(snap)=>{
+                if(!snap.exists()){ exitRoom(); return; }
+                currentRoom=snap.data(); handleRoomUpdate(currentRoom);
+            });
+        }
+
+        function handleRoomUpdate(room){
+            const isP1=room.p1===currentUser.uid;
+            document.getElementById('myRole').innerText=isP1?' (Host)':' (Guest)';
+            document.getElementById('oppRole').innerText=!isP1?' (Host)':' (Guest)';
+            document.getElementById('btnLeaveRoom').innerText=isP1?'방 삭제하고 나가기':'방 나가기';
+
+            // ── 새게임 요청 처리 ──
+            const myReady  = isP1 ? room.p1NewGame : room.p2NewGame;
+            const oppReady = isP1 ? room.p2NewGame : room.p1NewGame;
+
+            // 상태 표시: 내가 요청했지만 상대가 아직이면 안내
+            const statusDiv=document.getElementById('gameStatus');
+            if(myReady && !oppReady){
+                statusDiv.innerText='새게임 요청 중... 상대방 수락 대기';
+            }
+            // 버튼 텍스트 조정
+            const btnNew = document.getElementById('btnNewGame');
+            if(myReady && !oppReady){ btnNew.innerText='⏳ 수락 대기 중...'; btnNew.disabled=true; }
+            else if(!myReady && oppReady){ btnNew.innerText='✅ 새게임 수락'; btnNew.disabled=false; }
+            else { btnNew.innerText='🔄 새게임'; btnNew.disabled=false; }
+
+            // 둘 다 동의 → Host(P1)가 실제 리셋
+            if(room.p1NewGame && room.p2NewGame){
+                if(isP1){
+                    const ref = doc(db,'artifacts',appId,'public','data','rooms',room.id);
+                    updateDoc(ref,{
+                        status:'playing', winner:null,
+                        p1Board:JSON.stringify(createEmptyGrid()),
+                        p2Board:JSON.stringify(createEmptyGrid()),
+                        linesSentToP1:0, linesSentToP2:0,
+                        p1NewGame:false, p2NewGame:false,
+                        p1PlaneEvent:0, p2PlaneEvent:0
+                    }).catch(()=>{});
+                }
+                resetGameInRoom(room);
+                return; // handleRoomUpdate 나머지는 다음 스냅샷이 처리
+            }
+
+            const oppOverlay=document.getElementById('oppOverlay');
+
+            if(room.status==='playing'&&!room.winner&&!isPlaying){
+                isPlaying=true;
+                oppOverlay.classList.add('hidden');
+                if(!myReady && !oppReady) statusDiv.innerText='';
+                spawnPiece(); audio.playBGM();
+                animationFrameId=requestAnimationFrame(gameLoop);
+            } else if(room.status==='waiting'){
+                oppOverlay.classList.remove('hidden');
+                statusDiv.innerText='상대방을 기다리는 중...';
+            }
+
+            if(isPlaying||room.winner){
+                try{ const d=isP1?room.p2Board:room.p1Board; if(d) oppGrid=JSON.parse(d); drawBoard(oppCtx,oppGrid); }catch(e){}
+            }
+
+            if(isPlaying){
+                const incoming=isP1?room.linesSentToP1:room.linesSentToP2;
+                const newGarbage=incoming-handledGarbage;
+                if(newGarbage>0){ receiveGarbage(newGarbage); handledGarbage=incoming; }
+
+                // ── 상대방 비행기 이벤트 감지 → 내 화면의 상대 보드에 비행기 표시 ──
+                const oppPlaneEventCount = isP1 ? (room.p2PlaneEvent||0) : (room.p1PlaneEvent||0);
+                if(oppPlaneEventCount > handledPlaneEvent) {
+                    handledPlaneEvent = oppPlaneEventCount;
+                    if(!oppPlaneAnim || oppPlaneAnim.done) {
+                        startOppPlaneAnimation();
+                    }
+                }
+            }
+
+            if(room.winner){
+                isPlaying=false; audio.stopBGM();
+                cancelAnimationFrame(animationFrameId);
+                const ov=document.getElementById('myOverlay');
+                ov.classList.remove('hidden');
+                if(room.winner===currentUser.uid){
+                    ov.innerText='🏆 YOU WIN!';
+                    ov.className='overlay overlay-win';
+                } else {
+                    ov.innerText='💀 YOU LOSE';
+                    ov.className='overlay overlay-lose';
+                }
+                statusDiv.innerText='GAME OVER';
+            }
+        }
+
+        async function exitRoom(){
+            if(currentRoom&&currentUser){
+                const ref=doc(db,'artifacts',appId,'public','data','rooms',currentRoom.id);
+                if(currentRoom.p1===currentUser.uid){ try{await deleteDoc(ref);}catch(e){} }
+                else{ try{await updateDoc(ref,{p2:null,status:'waiting'});}catch(e){} }
+            }
+            isPlaying=false; currentRoom=null; audio.stopBGM();
+            if(animationFrameId) cancelAnimationFrame(animationFrameId);
+            if(roomSnapshotUnsubscribe){ roomSnapshotUnsubscribe(); roomSnapshotUnsubscribe=null; }
+            planeCanvas.style.display='none';
+            oppPlaneCanvas.style.display='none';
+            planeAnim=null; oppPlaneAnim=null; handledPlaneEvent=0;
+            showScreen('lobbyScreen');
+        }
+
+        async function requestNewGame(){
+            if(!currentRoom||!currentUser) return;
+            // 게임이 진행 중이거나 대기 중인 경우 모두 새 게임 요청 가능
+            const isP1 = currentRoom.p1===currentUser.uid;
+            // P1만 새게임을 시작할 수 있음 (Host 권한). P2에게는 안내 메시지 표시.
+            // 단, 양쪽 모두 '새게임 요청' 플래그를 Firestore에 올려서 둘 다 동의하면 리셋.
+            const ref = doc(db,'artifacts',appId,'public','data','rooms',currentRoom.id);
+            const myReadyField = isP1 ? 'p1NewGame' : 'p2NewGame';
+            try {
+                await updateDoc(ref, { [myReadyField]: true });
+            } catch(e) {}
+        }
+
+        function resetGameInRoom(room) {
+            // 게임 상태 로컬 초기화
+            isPlaying = false;
+            audio.stopBGM();
+            if(animationFrameId) cancelAnimationFrame(animationFrameId);
+            planeCanvas.style.display = 'none';
+            oppPlaneCanvas.style.display = 'none';
+            planeAnim = null; oppPlaneAnim = null; handledPlaneEvent = 0;
+            handledGarbage = 0;
+            myGrid  = createEmptyGrid();
+            oppGrid = createEmptyGrid();
+            piece   = null;
+            hitParticles = [];
+
+            // 오버레이 숨기기
+            const myOv  = document.getElementById('myOverlay');
+            const oppOv = document.getElementById('oppOverlay');
+            myOv.classList.add('hidden');
+
+            // 상대방이 아직 없으면 대기 오버레이 표시
+            const isP1 = room.p1===currentUser.uid;
+            const hasOpp = isP1 ? !!room.p2 : !!room.p1;
+            if(!hasOpp){
+                oppOv.classList.remove('hidden');
+                document.getElementById('gameStatus').innerText='상대방을 기다리는 중...';
+            } else {
+                oppOv.classList.add('hidden');
+            }
+
+            resizeCanvases();
+            drawBoard(myCtx,  myGrid);
+            drawBoard(oppCtx, oppGrid);
+        }
+
+        document.getElementById('btnCreateRoom').addEventListener('click',()=>{ audio.init(); createRoom(); });
+        document.getElementById('btnLeaveRoom').addEventListener('click', exitRoom);
+        document.getElementById('btnNewGame').addEventListener('click', requestNewGame);
+
+        window.addEventListener('resize', ()=>{
+            if(!document.getElementById('gameScreen').classList.contains('hidden')) resizeCanvases();
+        });
+
+        initApp();
+    </script>
+</body>
+</html>
