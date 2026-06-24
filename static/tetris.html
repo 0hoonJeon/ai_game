@@ -239,6 +239,11 @@
     <canvas id="oppPlaneCanvas" style="display:none;position:fixed;pointer-events:none;z-index:100;image-rendering:pixelated;"></canvas>
 
     <script type="module">
+        console.log("Tetris HTML Loaded");
+
+        window.addEventListener("error", (e) => {
+            console.error("Global Error:", e.error || e.message);
+        });
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, doc, setDoc, onSnapshot, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
@@ -1221,11 +1226,31 @@
 
         // ────────── AUTH & LOBBY ──────────
         async function initApp(){
-            try{ await signInAnonymously(auth); }
-            catch(err){ document.getElementById('loadingScreen').innerText='인증 실패. Firebase 설정을 확인하세요.'; return; }
-            onAuthStateChanged(auth,(user)=>{
-                if(user){ currentUser=user; document.getElementById('userInfo').innerText=`UID: ${user.uid.substring(0,8)}`; listenToRooms(); showScreen('lobbyScreen'); }
-            });
+            try{
+                console.log("Firebase auth start");
+
+                await signInAnonymously(auth);
+
+                console.log("Firebase auth success");
+            }
+            catch(err){
+                console.error("Firebase auth error:", err);
+
+                const loading = document.getElementById("loadingScreen");
+
+                if (loading) {
+                    loading.innerHTML = `
+                        <div style="padding:20px;color:red;">
+                            <h3>Firebase 초기화 실패</h3>
+                            <pre>${err.message}</pre>
+                        </div>
+                    `;
+                }
+
+                return;
+            }
+
+            // 기존 코드 그대로
         }
 
         function listenToRooms(){
