@@ -3,6 +3,7 @@ import streamlit as st
 import streamlit.components.v1 as components
 from datetime import datetime
 from db import get_global_db
+from pathlib import Path
 
 st.set_page_config(page_title="라이브 게임 중계", page_icon="🎮", layout="wide")
 
