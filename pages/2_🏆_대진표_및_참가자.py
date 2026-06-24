@@ -1,4 +1,17 @@
 import streamlit as st
+
+# 모든 접속자가 공유하는 실시간 인메모리 DB
+@st.cache_resource
+def get_global_db():
+    return {
+        "participants": [],  # 대회 신청자 명단
+        "matches": [],       # 실시간 대진표 상황
+        "chat_history": []   # 글로벌 채팅 내역
+    }
+
+global_db = get_global_db()
+
+import streamlit as st
 import pandas as pd
 import random
 import math
@@ -116,7 +129,7 @@ if 'base_matches' in st.session_state:
                     else:
                         st.markdown(f"<h5 style='text-align:center;'>{lp1} <span style='color:#f43f5e;'>VS</span> {lp2}</h5>", unsafe_allow_html=True)
                         sel_3rd = st.selectbox("3위 선택", ["진행 전", lp1, lp2], key="win_3rd", label_visibility="collapsed")
-                        third_place = sel_3rd if sel_3rd != "진행 전" else "?"
+                        third_place = sel_3rd1 if sel_3rd != "진행 전" else "?"
 
             # 다음 라운드(우측 컬럼)를 위한 매치업 데이터 가공
             next_matches = []
