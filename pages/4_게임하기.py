@@ -1,10 +1,12 @@
-import streamlit.components.v1 as components
+from pathlib import Path
+import streamlit as st
 
-with open("static/tetris.html", encoding="utf-8") as f:
-    html = f.read()
+html_file = Path("static/tetris.html")
 
-components.html(
-    html,
-    height=1000,
-    scrolling=True,
-)
+with open(html_file, "rb") as f:
+    st.download_button(
+        "🎮 테트리스 다운로드",
+        data=f,
+        file_name="tetris.html",
+        mime="text/html"
+    )
