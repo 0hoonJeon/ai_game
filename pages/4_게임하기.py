@@ -4,13 +4,13 @@ st.write("cwd:", __import__("os").getcwd())
 st.write("static:", __import__("os").path.exists("static"))
 st.write("tetris:", __import__("os").path.exists("static/tetris.html"))
 
-import streamlit as st
+import streamlit.components.v1 as components
 
-st.markdown(
-    """
-    <a href="/static/tetris.html" target="_blank">
-        <button>테트리스 실행</button>
-    </a>
-    """,
-    unsafe_allow_html=True
+with open("static/tetris.html", encoding="utf-8") as f:
+    html = f.read()
+
+components.html(
+    html,
+    height=1000,
+    scrolling=True,
 )
