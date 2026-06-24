@@ -1,7 +1,5 @@
 import streamlit as st
 
-with st.sidebar():
-    st.write('hihi')
 
 st.set_page_config(
     page_title="내 앱",
