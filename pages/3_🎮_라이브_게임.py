@@ -54,22 +54,10 @@ elif mode == "👀 관전 및 응원 모드":
         profile = st.session_state['spectator_profile']
         col_game, col_chat = st.columns([3, 1])
         
-        # with col_game:
-        #     st.caption("💡 게임 화면 내부의 버튼을 눌러 관전하세요.")
-        #     # components.iframe("/app/static/tetris.html", height=750, scrolling=False)
-        #     components.iframe("http://localhost:8501/static/tetris.html", height=800)
-        # ── [게임 렌더링 부분만 아래처럼 수정] ──
-		with col_game:
-		    st.caption("💡 게임 화면 내부의 버튼을 눌러 관전하세요.")
-		    with st.container(border=True):
-		        try:
-		            with open("static/tetris.html", "r", encoding="utf-8") as f:
-		                html_content = f.read()
-		                # 💡 핵심: components.html은 iframe이지만, 
-		                # src를 쓰는 iframe보다 내용 직접 주입이 훨씬 오류가 적습니다.
-		                components.html(html_content, height=800, scrolling=False)
-		        except Exception as e:
-		            st.error(f"렌더링 오류: {e}")
+        with col_game:
+            st.caption("💡 게임 화면 내부의 버튼을 눌러 관전하세요.")
+            # components.iframe("/app/static/tetris.html", height=750, scrolling=False)
+            components.iframe("static/tetris.html", height=800)
                     
         with col_chat:
             st.subheader("💬 라이브 채팅")
