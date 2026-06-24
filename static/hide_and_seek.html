@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { margin: 0; background: #000; color: #fff; overflow: hidden; }
+        #canvas { width: 100vw; height: 100vh; display: block; }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        // 간단한 맵 (1은 벽, 0은 빈 공간)
+        const map = [
+            [1,1,1,1,1],
+            [1,0,0,0,1],
+            [1,0,1,0,1],
+            [1,0,0,0,1],
+            [1,1,1,1,1]
+        ];
+
+        let player = { x: 2.5, y: 2.5, dir: 0 };
+
+        function render() {
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // 레이캐스팅 로직 (매우 단순화)
+            for (let i = 0; i < 320; i++) {
+                let rayDir = player.dir - 0.5 + (i / 320);
+                let dist = 0;
+                let hit = false;
+                while (!hit && dist < 10) {
+                    dist += 0.1;
+                    let tx = Math.floor(player.x + Math.cos(rayDir) * dist);
+                    let ty = Math.floor(player.y + Math.sin(rayDir) * dist);
+                    if (map[ty][tx] === 1) hit = true;
+                }
+                
+                let h = 400 / dist;
+                ctx.fillStyle = `hsl(200, 100%, ${50/dist}%)`;
+                ctx.fillRect(i * 2, 200 - h/2, 2, h);
+            }
+        }
+
+        function loop() {
+            render();
+            requestAnimationFrame(loop);
+        }
+        loop();
+    </script>
+</body>
+</html>
