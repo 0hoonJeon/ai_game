@@ -57,7 +57,7 @@ elif mode == "👀 관전 및 응원 모드":
         with col_game:
             st.caption("💡 게임 화면 내부의 버튼을 눌러 관전하세요.")
             # components.iframe("/app/static/tetris.html", height=750, scrolling=False)
-            components.iframe("static/tetris.html", height=800)
+            components.iframe("/static/tetris.html", height=800)
                     
         with col_chat:
             st.subheader("💬 라이브 채팅")
