@@ -1,13 +1,5 @@
 import streamlit as st
-
-# 모든 접속자가 공유하는 실시간 인메모리 DB
-@st.cache_resource
-def get_global_db():
-    return {
-        "participants": [],  # 대회 신청자 명단
-        "matches": [],       # 실시간 대진표 상황
-        "chat_history": []   # 글로벌 채팅 내역
-    }
+from db import get_global_db
 
 global_db = get_global_db()
 
