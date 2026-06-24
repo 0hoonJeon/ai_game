@@ -49,7 +49,7 @@ if mode == "🎮 대회 선수 (인증 필요)":
         st.markdown(
 		    """
 		    <iframe
-		        src="/static/tetris.html"
+		        src="/static/cyber_duel_tetris_v7.html"
 		        width="100%"
 		        height="700"
 		    ></iframe>
