@@ -8,8 +8,8 @@ st.set_page_config(page_title="사이버 듀얼 토너먼트", page_icon="🏆",
 global_db = get_global_db()
 
 # ── [상단 헤더] ──
-st.title("⚡ Cyber-Duel Tetris Tournament")
-st.markdown("### 제 1회 공식 테트리스 챔피언십에 오신 것을 환영합니다!")
+st.title("⚡ Cyber-Duel  Tournament")
+st.markdown("### 제 1회 공식 챔피언십에 오신 것을 환영합니다!")
 st.divider()
 
 # ── [메인 레이아웃: 대시보드] ──
