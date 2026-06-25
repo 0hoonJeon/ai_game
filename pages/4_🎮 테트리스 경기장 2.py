@@ -8,7 +8,6 @@ from pathlib import Path
 st.set_page_config(page_title="라이브 게임 중계", page_icon="🎮", layout="wide")
 
 global_db = get_global_db()
-
 # 세션 상태 초기화
 if 'player_auth' not in st.session_state: st.session_state['player_auth'] = False
 if 'spectator_profile' not in st.session_state: st.session_state['spectator_profile'] = None
