@@ -5,7 +5,7 @@ st.set_page_config(page_title="실시간 숨바꼭질", layout="wide")
 st.title("👻 실시간 3D 숨바꼭질")
 
 # 게임 화면을 불러옵니다
-st.iframe("./static/vampire_survival.html", height=600)
+st.iframe("./static/vampire_survival.html", height=800)
 
 st.markdown("""
 ### 🎮 게임 안내
