@@ -1,0 +1,1673 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cyber-Duel Tetris</title>
+    <link href="https://api.fontshare.com/v2/css?f[]=cabinet-grotesk@400,700,900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg:       #0d0f1a;
+            --surface:  #141726;
+            --surface2: #1c2035;
+            --border:   #2a3050;
+            --accent:   #38bdf8;
+            --accent2:  #818cf8;
+            --danger:   #f43f5e;
+            --gold:     #fbbf24;
+            --green:    #34d399;
+            --text:     #e2e8f0;
+            --muted:    #64748b;
+            --font:     'Cabinet Grotesk', 'Segoe UI', sans-serif;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: var(--font);
+            background: var(--bg);
+            color: var(--text);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        /* ── HEADER ── */
+        header {
+            width: 100%;
+            padding: 12px 28px;
+            border-bottom: 1px solid var(--border);
+            background: linear-gradient(90deg, #0d0f1a 0%, #141726 100%);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 20px rgba(56,189,248,0.08);
+        }
+        .logo {
+            font-size: 22px;
+            font-weight: 900;
+            letter-spacing: 2px;
+            background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-transform: uppercase;
+        }
+        #userInfo { font-size: 11px; color: var(--muted); font-family: monospace; }
+
+        /* ── LOADING ── */
+        #loadingScreen {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            color: var(--accent);
+            letter-spacing: 1px;
+        }
+
+        /* ── LOBBY ── */
+        #lobbyScreen {
+            width: 100%;
+            max-width: 720px;
+            margin-top: 36px;
+            padding: 28px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            box-shadow: 0 0 40px rgba(56,189,248,0.07);
+        }
+        #lobbyScreen h2 { font-size: 20px; font-weight: 700; color: var(--accent); margin-bottom: 4px; }
+        #lobbyScreen p  { font-size: 13px; color: var(--muted); }
+        .lobby-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+        .lobby-create { display: flex; gap: 10px; }
+        input[type="text"] {
+            padding: 10px 14px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text);
+            font-family: var(--font);
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.2s;
+            width: 220px;
+        }
+        input[type="text"]:focus { border-color: var(--accent); }
+        input[type="text"]::placeholder { color: var(--muted); }
+        .btn { cursor: pointer; font-family: var(--font); font-weight: 700; border: none; border-radius: 8px; padding: 10px 20px; font-size: 14px; transition: all 0.18s; }
+        .btn-primary { background: var(--accent); color: #0d0f1a; box-shadow: 0 0 12px rgba(56,189,248,0.3); }
+        .btn-primary:hover { background: #7dd3fc; transform: translateY(-1px); }
+        .btn-danger  { background: var(--danger); color: #fff; }
+        .btn-danger:hover  { background: #fb7185; }
+        .btn-ghost   { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+        .btn-ghost:hover   { border-color: var(--accent); color: var(--accent); }
+        .btn-join    { background: var(--accent2); color: #fff; }
+        .btn-join:hover    { background: #a5b4fc; }
+        .room-item { display: flex; justify-content: space-between; align-items: center; padding: 14px 16px; background: var(--surface2); border-radius: 10px; border: 1px solid var(--border); margin-bottom: 8px; }
+        .badge { display: inline-block; font-size: 11px; padding: 3px 10px; border-radius: 99px; font-weight: 700; }
+        .badge-wait { background: rgba(52,211,153,0.12); color: var(--green); }
+        .badge-play { background: rgba(244,63,94,0.12); color: var(--danger); }
+        .rules-box { margin-top: 20px; padding: 16px; background: var(--bg); border-radius: 10px; border: 1px solid var(--border); font-size: 13px; color: var(--muted); }
+        .rules-box h3 { color: var(--accent); margin-bottom: 8px; font-size: 14px; }
+        .rules-box li { margin-bottom: 4px; padding-left: 14px; position: relative; line-height: 1.4; }
+        .rules-box li::before { content: '▸'; position: absolute; left: 0; color: var(--accent2); }
+        .empty-rooms { text-align: center; padding: 32px; color: var(--muted); border: 1px dashed var(--border); border-radius: 10px; }
+
+        /* ── GAME SCREEN ── */
+        #gameScreen {
+            width: 100%;
+            /* 모니터 꽉 채우기 위해 max-width 하드코딩 제거 */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 10px 12px 8px;
+        }
+        .game-topbar {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 14px;
+            padding: 10px 18px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+        }
+        .player-label { font-size: 16px; font-weight: 700; }
+        .label-me  { color: var(--accent); }
+        .label-opp { color: var(--accent2); }
+        #gameStatus { font-size: 16px; font-weight: 700; color: var(--gold); letter-spacing: 1px; text-align:center; min-width: 250px; }
+        .boards-row { display: flex; gap: 28px; align-items: flex-start; position: relative; }
+        .board-wrap { position: relative; }
+        canvas {
+            display: block;
+            background: var(--bg);
+            border: 1.5px solid var(--border);
+            border-radius: 6px;
+            image-rendering: pixelated;
+            box-shadow: 0 0 24px rgba(0,0,0,0.5);
+        }
+        #planeCanvas, #oppPlaneCanvas {
+            background: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+        }
+        
+        .my-canvas { border-color: var(--accent); box-shadow: 0 0 20px rgba(56,189,248,0.25); }
+        .overlay {
+            position: absolute; inset: 0;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 28px; font-weight: 900; letter-spacing: 2px;
+            border-radius: 6px;
+            text-align: center;
+        }
+        .overlay-win  { background: rgba(52,211,153,0.18); color: var(--green); border: 2px solid var(--green); text-shadow: 0 0 20px var(--green); }
+        .overlay-lose { background: rgba(244,63,94,0.18); color: var(--danger); border: 2px solid var(--danger); text-shadow: 0 0 20px var(--danger); }
+        .overlay-wait { background: rgba(13,15,26,0.85); color: var(--muted); border: 1px dashed var(--border); font-size: 15px; }
+        
+        /* 중앙 팝업 애니메이션 */
+        .floating-text {
+            position: absolute;
+            top: 40%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.5);
+            font-size: 22px;
+            font-weight: 900;
+            text-align: center;
+            pointer-events: none;
+            opacity: 0;
+            z-index: 200;
+            white-space: nowrap;
+        }
+        .floating-text.show {
+            animation: popFade 2s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+        @keyframes popFade {
+            0%   { opacity: 0; transform: translate(-50%, -20%) scale(0.5); }
+            15%  { opacity: 1; transform: translate(-50%, -50%) scale(1.1); }
+            80%  { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+            100% { opacity: 0; transform: translate(-50%, -80%) scale(0.9); }
+        }
+
+        .vs-divider {
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            width: 36px; align-self: stretch; position: relative;
+        }
+        .vs-divider::before { content: ''; position: absolute; top: 0; bottom: 0; left: 50%; width: 1px; background: var(--border); }
+        .vs-badge {
+            background: var(--surface2); border: 1.5px solid var(--border);
+            border-radius: 50%; width: 32px; height: 32px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 11px; font-weight: 700; color: var(--muted); z-index: 1;
+        }
+        .hidden { display: none !important; }
+        .btn-leave { margin-top: 14px; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <span class="logo">⚡ Cyber-Duel Tetris</span>
+        <div id="userInfo">인증 중...</div>
+    </header>
+
+    <div id="loadingScreen">게임 시스템 초기화 중...</div>
+
+    <div id="lobbyScreen" class="hidden">
+        <div class="lobby-top">
+            <div>
+                <h2>접속 가능한 게임 방</h2>
+                <p>동일 URL 접속자간 매칭됩니다.</p>
+            </div>
+            <div class="lobby-create">
+                <input type="text" id="roomTitleInput" placeholder="방 제목 입력..." maxlength="20">
+                <button id="btnCreateRoom" class="btn btn-primary">+ 방 만들기</button>
+            </div>
+        </div>
+        <div id="roomList"></div>
+        <div class="rules-box">
+            <h3>📖 조작 방법 및 룰</h3>
+            <ul style="list-style:none">
+                <li>방향키 좌/우/아래: 이동 &nbsp;|&nbsp; 방향키 위: 회전 &nbsp;|&nbsp; 스페이스바: 단번에 내리기</li>
+                <li>줄을 지우면 상대방의 바닥에서 회색 방해 블록이 올라옵니다.</li>
+                <li>💣 폭탄 블록이 포함된 줄 완성 → 폭발! 착탄 열(세로) 전체 삭제 + 상대에게 3줄 방해.</li>
+                <li>🐢 느림 블록이 포함된 줄 완성 → 내 낙하속도가 5초간 느려집니다 (나에게 유리).</li>
+                <li>❄️ 멈춤 블록이 포함된 줄 완성 → 얼음 공격! 상대방의 키보드 조작을 5초간 무시합니다 (상대에게 불리).</li>
+                <li>✈️ 비행기 아이템이 포함된 줄 완성 → 전투기가 폭탄 4발을 투하하며, 닿은 최상단 블록 1칸씩만 파괴합니다.</li>
+            </ul>
+        </div>
+    </div>
+
+    <div id="gameScreen" class="hidden">
+        <div class="game-topbar">
+            <div class="player-label label-me">당신<span id="myRole" style="font-size:12px;font-weight:400;color:var(--muted)"></span></div>
+            <div id="gameStatus">상대방을 기다리는 중...</div>
+            <div class="player-label label-opp">상대방<span id="oppRole" style="font-size:12px;font-weight:400;color:var(--muted)"></span></div>
+        </div>
+
+        <div class="boards-row">
+            <div class="board-wrap">
+                <canvas id="myCanvas" width="240" height="480" class="my-canvas" style="max-width:100%;"></canvas>
+                <div id="myOverlay" class="overlay hidden"></div>
+                <div id="myFloatingText" class="floating-text"></div>
+            </div>
+
+            <div class="vs-divider">
+                <div class="vs-badge">VS</div>
+            </div>
+
+            <div class="board-wrap" style="opacity:0.85">
+                <canvas id="oppCanvas" width="240" height="480" style="max-width:100%;"></canvas>
+                <div id="oppOverlay" class="overlay overlay-wait">Waiting...</div>
+            </div>
+        </div>
+
+        <div style="display:flex;gap:10px;margin-top:14px;">
+            <button id="btnNewGame" class="btn btn-ghost">🔄 새게임</button>
+            <button id="btnLeaveRoom" class="btn btn-danger">방 나가기</button>
+        </div>
+    </div>
+
+    <canvas id="planeCanvas"    style="display:none;position:fixed;pointer-events:none;z-index:100;image-rendering:pixelated;"></canvas>
+    <canvas id="oppPlaneCanvas" style="display:none;position:fixed;pointer-events:none;z-index:100;image-rendering:pixelated;"></canvas>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, doc, setDoc, onSnapshot, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const firebaseConfig = {	
+            apiKey: "AIzaSyACaEsIaxA8MMo3qs7wJ18OoBuHBVKfE9Q",
+            authDomain: "battle-tetris-5842e.firebaseapp.com",
+            projectId: "battle-tetris-5842e",
+            storageBucket: "battle-tetris-5842e.firebasestorage.app",
+            messagingSenderId: "628854407123",
+            appId: "1:628854407123:web:4f2d02076746c3e77a3926"
+        };
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const appId = 'cyber-duel-tetris-local';
+
+        const COLS = 10, ROWS = 20;
+        let BS = 24; 
+
+        // 동적 크기 계산: 화면 여백에 맞춰 한계 없이 꽉 채우도록 계산식 수정
+        function calcBS() {
+            const headerH = document.querySelector('header').offsetHeight || 50;
+            const topbarH = 60; 
+            const btnH    = 60; 
+            const padV    = 60; 
+            const availH  = window.innerHeight - headerH - topbarH - btnH - padV;
+            const fromH   = Math.floor(availH / ROWS);
+
+            const padH    = 40; 
+            const gapW    = 56; // gap (28 * 2)
+            const vsW     = 36; // VS 뱃지 크기
+            const availW  = window.innerWidth - padH;
+            const fromW   = Math.floor((availW - vsW - gapW) / (COLS * 2)); 
+
+            // 최대치(32px) 제한 완전 해제
+            BS = Math.max(16, Math.min(fromH, fromW)); 
+        }
+
+        function resizeCanvases() {
+            calcBS();
+            const W = COLS * BS, H = ROWS * BS;
+            myCanvas.width  = W; myCanvas.height  = H;
+            oppCanvas.width = W; oppCanvas.height = H;
+            
+            // UI(상단바 등)의 최대 너비가 게임 보드 너비와 딱 맞도록 조절하여 일체감 유지
+            const totalBoardWidth = (W * 2) + 36 + 56 + 24; 
+            document.getElementById('gameScreen').style.maxWidth = totalBoardWidth + 'px';
+
+            if(planeCanvas.style.display !== 'none') {
+                const r = myCanvas.getBoundingClientRect();
+                planeCanvas.style.left=r.left+'px'; planeCanvas.style.top=r.top+'px';
+                planeCanvas.style.width=r.width+'px'; planeCanvas.style.height=r.height+'px';
+            }
+            if(oppPlaneCanvas.style.display !== 'none') {
+                const r = oppCanvas.getBoundingClientRect();
+                oppPlaneCanvas.style.left=r.left+'px'; oppPlaneCanvas.style.top=r.top+'px';
+                oppPlaneCanvas.style.width=r.width+'px'; oppPlaneCanvas.style.height=r.height+'px';
+            }
+            drawBoard(myCtx,  myGrid,  isPlaying ? piece : null);
+            drawBoard(oppCtx, oppGrid);
+        }
+
+        // ────────────────────────────────────────────────
+        //  PIECE DEFINITIONS
+        //  1: 일반, 3: 폭탄, 4: 비행기, 5: 느림(SLOW), 6: 멈춤(FREEZE)
+        // ────────────────────────────────────────────────
+        const TETROMINOES = {
+            0:   { shape: [[0]], color: null },
+            'I': { shape: [[1,1,1,1]], color: '#38bdf8' },
+            'O': { shape: [[1,1],[1,1]], color: '#fbbf24' },
+            'T': { shape: [[0,1,0],[1,1,1]], color: '#818cf8' },
+            'L': { shape: [[0,0,1],[1,1,1]], color: '#fb923c' },
+            'G': { shape: [[1]], color: '#374151' },   
+            'BT':{ shape: [[0,3,0],[1,1,1]], color: '#818cf8' }, 
+            'PL':{ shape: [[0,0,4],[1,1,1]], color: '#fb923c' }, 
+            'SL':{ shape: [[1,0],[5,1],[0,1]], color: '#34d399' }, 
+            'FR':{ shape: [[6,6],[1,1]],       color: '#60a5fa' }, 
+        };
+
+        const PIECE_POOL = ['I','O','T','L','I','O','T','L','I','T','L','BT','PL','SL','FR'];
+
+        let currentUser = null, currentRoom = null;
+        let roomsSnapshotUnsubscribe = null, roomSnapshotUnsubscribe = null;
+        let myGrid = createEmptyGrid();
+        let oppGrid = createEmptyGrid();
+        let piece = null, animationFrameId = null, lastDropTime = 0;
+        
+        const NORMAL_DROP_INTERVAL = 800;
+        const SLOW_DROP_INTERVAL = 2000; 
+        let dropInterval = NORMAL_DROP_INTERVAL;
+        
+        let isPlaying = false, handledGarbage = 0;
+        
+        // 아이템 관련 상태 변수
+        let slowTimer = null;
+        let handledFreezeEvent = 0;
+        let isFrozen = false;
+        let freezeTimer = null;
+
+        const loadingScreen = document.getElementById('loadingScreen');
+        const lobbyScreen   = document.getElementById('lobbyScreen');
+        const gameScreen    = document.getElementById('gameScreen');
+        const myCanvas      = document.getElementById('myCanvas');
+        const oppCanvas     = document.getElementById('oppCanvas');
+        const myCtx         = myCanvas.getContext('2d');
+        const oppCtx        = oppCanvas.getContext('2d');
+        const planeCanvas   = document.getElementById('planeCanvas');
+        const planeCtx      = planeCanvas.getContext('2d');
+        const oppPlaneCanvas = document.getElementById('oppPlaneCanvas');
+        const oppPlaneCtx    = oppPlaneCanvas.getContext('2d');
+
+        let planeAnim    = null; 
+        let oppPlaneAnim = null; 
+        let handledPlaneEvent = 0; 
+
+        // ────────── UI EFFECTS ──────────
+        function showFloatingText(text, color) {
+            const ft = document.getElementById('myFloatingText');
+            if (!ft) return;
+            ft.innerText = text;
+            ft.style.color = color;
+            ft.style.textShadow = `0 0 20px ${color}, 0 0 10px rgba(0,0,0,0.8)`;
+            
+            // 화면 크기가 커지면 폰트 사이즈도 비례해서 커지도록 설정
+            const size = Math.max(22, BS * 0.9);
+            ft.style.fontSize = size + 'px';
+            
+            ft.classList.remove('show');
+            void ft.offsetWidth; 
+            ft.classList.add('show');
+        }
+
+        // ────────── AUDIO ──────────
+        class AudioEngine {
+            constructor() {
+                this.ctx = null; this.isPlaying = false; this.timeoutIds = [];
+                this.melody = [
+                    {note:659.25,dur:400},{note:493.88,dur:200},{note:523.25,dur:200},{note:587.33,dur:400},
+                    {note:523.25,dur:200},{note:493.88,dur:200},{note:440.00,dur:400},{note:440.00,dur:200},
+                    {note:523.25,dur:200},{note:659.25,dur:400},{note:587.33,dur:200},{note:523.25,dur:200},
+                    {note:493.88,dur:600},{note:523.25,dur:200},{note:587.33,dur:400},{note:659.25,dur:400},
+                    {note:523.25,dur:400},{note:440.00,dur:400},{note:440.00,dur:800}
+                ];
+            }
+            init() { if(!this.ctx) this.ctx=new(window.AudioContext||window.webkitAudioContext)(); if(this.ctx.state==='suspended') this.ctx.resume(); }
+            playBGM() { if(this.isPlaying) return; this.init(); this.isPlaying=true; this.playMelodyLoop(); }
+            stopBGM() { this.isPlaying=false; this.timeoutIds.forEach(clearTimeout); this.timeoutIds=[]; }
+            playMelodyLoop(index=0) {
+                if(!this.isPlaying||!this.ctx) return;
+                const n=this.melody[index];
+                this.playTone(n.note,'square',n.dur/1000,0.04);
+                const id=setTimeout(()=>this.playMelodyLoop((index+1)%this.melody.length),n.dur);
+                this.timeoutIds.push(id);
+            }
+            playTone(freq,type,duration,vol) {
+                if(!this.ctx) return;
+                const osc=this.ctx.createOscillator(), gain=this.ctx.createGain();
+                osc.type=type; osc.frequency.setValueAtTime(freq,this.ctx.currentTime);
+                gain.gain.setValueAtTime(vol,this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001,this.ctx.currentTime+duration);
+                osc.connect(gain); gain.connect(this.ctx.destination); osc.start(); osc.stop(this.ctx.currentTime+duration);
+            }
+            playAttackSound() {
+                this.init();
+                const osc=this.ctx.createOscillator(), gain=this.ctx.createGain();
+                osc.type='sawtooth'; osc.frequency.setValueAtTime(800,this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(100,this.ctx.currentTime+0.3);
+                gain.gain.setValueAtTime(0.2,this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001,this.ctx.currentTime+0.3);
+                osc.connect(gain); gain.connect(this.ctx.destination); osc.start(); osc.stop(this.ctx.currentTime+0.3);
+            }
+            playLaserSound() {
+                this.init();
+                const osc=this.ctx.createOscillator(), gain=this.ctx.createGain();
+                osc.type='sine'; osc.frequency.setValueAtTime(900,this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(200,this.ctx.currentTime+0.4);
+                gain.gain.setValueAtTime(0.15,this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001,this.ctx.currentTime+0.4);
+                osc.connect(gain); gain.connect(this.ctx.destination); osc.start(); osc.stop(this.ctx.currentTime+0.4);
+            }
+            playGalagaShot() {
+                this.init();
+                const t = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator(), gain = this.ctx.createGain();
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(1200, t);
+                osc.frequency.exponentialRampToValueAtTime(400, t + 0.12);
+                gain.gain.setValueAtTime(0.18, t);
+                gain.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
+                osc.connect(gain); gain.connect(this.ctx.destination);
+                osc.start(t); osc.stop(t + 0.12);
+            }
+            playPlaneAppear() {
+                this.init();
+                const t = this.ctx.currentTime;
+                const buf = this.ctx.createBuffer(1, this.ctx.sampleRate * 0.8, this.ctx.sampleRate);
+                const d = buf.getChannelData(0);
+                for(let i=0;i<d.length;i++) d[i] = Math.random()*2-1;
+                const src = this.ctx.createBufferSource();
+                const filter = this.ctx.createBiquadFilter();
+                filter.type = 'bandpass'; filter.frequency.value = 600; filter.Q.value = 0.8;
+                const gNoise = this.ctx.createGain();
+                src.buffer = buf;
+                gNoise.gain.setValueAtTime(0.0, t);
+                gNoise.gain.linearRampToValueAtTime(0.22, t+0.15);
+                gNoise.gain.linearRampToValueAtTime(0.18, t+0.5);
+                gNoise.gain.exponentialRampToValueAtTime(0.001, t+0.8);
+                src.connect(filter); filter.connect(gNoise); gNoise.connect(this.ctx.destination);
+                src.start(t); src.stop(t+0.8);
+                const osc = this.ctx.createOscillator(), gOsc = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(520, t);
+                osc.frequency.exponentialRampToValueAtTime(180, t+0.7);
+                gOsc.gain.setValueAtTime(0.0, t);
+                gOsc.gain.linearRampToValueAtTime(0.12, t+0.1);
+                gOsc.gain.exponentialRampToValueAtTime(0.001, t+0.7);
+                osc.connect(gOsc); gOsc.connect(this.ctx.destination);
+                osc.start(t); osc.stop(t+0.7);
+            }
+            playBombExplode() {
+                this.init();
+                const t = this.ctx.currentTime;
+                const osc1 = this.ctx.createOscillator(), g1 = this.ctx.createGain();
+                osc1.type = 'sine';
+                osc1.frequency.setValueAtTime(80, t);
+                osc1.frequency.exponentialRampToValueAtTime(25, t+0.6);
+                g1.gain.setValueAtTime(0.55, t);
+                g1.gain.exponentialRampToValueAtTime(0.001, t+0.6);
+                osc1.connect(g1); g1.connect(this.ctx.destination);
+                osc1.start(t); osc1.stop(t+0.6);
+                const osc2 = this.ctx.createOscillator(), g2 = this.ctx.createGain();
+                osc2.type = 'sawtooth';
+                osc2.frequency.setValueAtTime(200, t);
+                osc2.frequency.exponentialRampToValueAtTime(50, t+0.45);
+                g2.gain.setValueAtTime(0.3, t);
+                g2.gain.exponentialRampToValueAtTime(0.001, t+0.45);
+                osc2.connect(g2); g2.connect(this.ctx.destination);
+                osc2.start(t); osc2.stop(t+0.45);
+                const bufLen = this.ctx.sampleRate * 0.5;
+                const nBuf = this.ctx.createBuffer(1, bufLen, this.ctx.sampleRate);
+                const nd = nBuf.getChannelData(0);
+                for(let i=0;i<nd.length;i++) nd[i] = (Math.random()*2-1) * Math.pow(1-i/bufLen, 1.5);
+                const nSrc = this.ctx.createBufferSource(), gN = this.ctx.createGain();
+                const lpf = this.ctx.createBiquadFilter();
+                lpf.type='lowpass'; lpf.frequency.value=1800;
+                nSrc.buffer = nBuf;
+                gN.gain.setValueAtTime(0.5, t);
+                gN.gain.exponentialRampToValueAtTime(0.001, t+0.5);
+                nSrc.connect(lpf); lpf.connect(gN); gN.connect(this.ctx.destination);
+                nSrc.start(t); nSrc.stop(t+0.5);
+                const osc3 = this.ctx.createOscillator(), g3 = this.ctx.createGain();
+                osc3.type = 'square';
+                osc3.frequency.setValueAtTime(600, t);
+                osc3.frequency.exponentialRampToValueAtTime(100, t+0.15);
+                g3.gain.setValueAtTime(0.2, t);
+                g3.gain.exponentialRampToValueAtTime(0.001, t+0.15);
+                osc3.connect(g3); g3.connect(this.ctx.destination);
+                osc3.start(t); osc3.stop(t+0.15);
+            }
+        }
+        const audio = new AudioEngine();
+
+        // ────────── HELPERS ──────────
+        function createEmptyGrid() {
+            return Array.from({length:ROWS}, ()=>Array(COLS).fill(0));
+        }
+        function randomPiece() {
+            return PIECE_POOL[Math.floor(Math.random()*PIECE_POOL.length)];
+        }
+        function showScreen(id) {
+            [loadingScreen,lobbyScreen,gameScreen].forEach(s=>s.classList.add('hidden'));
+            document.getElementById(id).classList.remove('hidden');
+        }
+
+        // ────────── DRAWING ──────────
+        const COLORS = {
+            'I':'#38bdf8','O':'#fbbf24','T':'#818cf8','L':'#fb923c',
+            'G':'#374151',
+            'BT':'#818cf8', 
+            'PL':'#fb923c', 
+            'SL':'#34d399', 
+            'FR':'#60a5fa',
+            'B':'#ef4444',  
+            'P':'#34d399',  
+            'W':'#34d399',  
+            'F':'#60a5fa',  
+        };
+
+        function drawBlock(ctx, x, y, type, special=null) {
+            if (!type || type === 0) return;
+            const px = x * BS + 1, py = y * BS + 1, s = BS - 2;
+            const color = COLORS[special || type] || '#888';
+
+            const grad = ctx.createLinearGradient(px, py, px+s, py+s);
+            grad.addColorStop(0, lighten(color, 0.25));
+            grad.addColorStop(1, darken(color, 0.25));
+            ctx.fillStyle = grad;
+            ctx.beginPath();
+            roundRect(ctx, px, py, s, s, 3);
+            ctx.fill();
+
+            ctx.fillStyle = 'rgba(255,255,255,0.18)';
+            ctx.beginPath();
+            roundRect(ctx, px+1, py+1, s*0.55, s*0.35, 2);
+            ctx.fill();
+
+            const cx = px + s/2, cy = py + s/2;
+            const iconR = s * 0.32;
+
+            if (special === 'B' || type === 'B') {
+                ctx.save();
+                ctx.beginPath();
+                ctx.arc(cx, cy + iconR*0.2, iconR, 0, Math.PI*2);
+                ctx.fillStyle = '#1a1a1a';
+                ctx.fill();
+                ctx.strokeStyle = '#555';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(cx + iconR*0.6, cy - iconR*0.3);
+                ctx.quadraticCurveTo(cx + iconR*1.1, cy - iconR*1.1, cx + iconR*0.3, cy - iconR*1.3);
+                ctx.strokeStyle = '#8B6914';
+                ctx.lineWidth = Math.max(1.5, s*0.06);
+                ctx.lineCap = 'round';
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.arc(cx + iconR*0.3, cy - iconR*1.4, iconR*0.25, 0, Math.PI*2);
+                ctx.fillStyle = '#ff6600';
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(cx + iconR*0.3, cy - iconR*1.5, iconR*0.15, 0, Math.PI*2);
+                ctx.fillStyle = '#ffdd00';
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(cx - iconR*0.25, cy - iconR*0.1, iconR*0.28, 0, Math.PI*2);
+                ctx.fillStyle = 'rgba(255,255,255,0.22)';
+                ctx.fill();
+                ctx.restore();
+            } else if (special === 'P' || type === 'P') {
+                ctx.save();
+                ctx.translate(cx, cy);
+                const sc = iconR / 10;
+                ctx.scale(sc, sc);
+                ctx.fillStyle = '#e2e8f0';
+                ctx.beginPath();
+                ctx.ellipse(0, 0, 10, 3.5, 0, 0, Math.PI*2);
+                ctx.fill();
+                ctx.fillStyle = '#94a3b8';
+                ctx.beginPath();
+                ctx.moveTo(-3, 0); ctx.lineTo(4, -8); ctx.lineTo(6, 0); ctx.closePath();
+                ctx.fill();
+                ctx.beginPath();
+                ctx.moveTo(-8, 0); ctx.lineTo(-10, -5); ctx.lineTo(-7, 0); ctx.closePath();
+                ctx.fill();
+                ctx.fillStyle = '#38bdf8';
+                ctx.beginPath();
+                ctx.ellipse(5, -1, 3, 2, -0.3, 0, Math.PI*2);
+                ctx.fill();
+                ctx.fillStyle = '#f97316';
+                ctx.globalAlpha = 0.9;
+                ctx.beginPath();
+                ctx.ellipse(-12, 1, 3, 1.5, 0, 0, Math.PI*2);
+                ctx.fill();
+                ctx.fillStyle = '#fbbf24';
+                ctx.beginPath();
+                ctx.ellipse(-14, 1, 1.8, 1, 0, 0, Math.PI*2);
+                ctx.fill();
+                ctx.globalAlpha = 1;
+                ctx.restore();
+            } else if (special === 'W' || type === 'W') { 
+                ctx.save();
+                ctx.translate(cx, cy);
+                ctx.beginPath();
+                ctx.arc(0, 0, iconR * 0.85, Math.PI, 0, false);
+                ctx.fillStyle = '#059669';
+                ctx.fill();
+                ctx.strokeStyle = '#34d399';
+                ctx.lineWidth = Math.max(1, s * 0.04);
+                ctx.beginPath();
+                ctx.arc(0, 0, iconR * 0.55, Math.PI, 0, false);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(-iconR*0.5, -iconR*0.2);
+                ctx.lineTo(iconR*0.5, -iconR*0.2);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.ellipse(0, iconR*0.3, iconR*0.7, iconR*0.35, 0, 0, Math.PI*2);
+                ctx.fillStyle = '#6ee7b7';
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(iconR*0.75, -iconR*0.1, iconR*0.28, 0, Math.PI*2);
+                ctx.fillStyle = '#6ee7b7';
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(iconR*0.88, -iconR*0.2, iconR*0.07, 0, Math.PI*2);
+                ctx.fillStyle = '#1a1a1a';
+                ctx.fill();
+                ctx.restore();
+            } else if (special === 'F' || type === 'F') { 
+                ctx.save();
+                ctx.translate(cx, cy);
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = Math.max(1.5, s * 0.08);
+                ctx.lineCap = 'round';
+                for(let i=0; i<4; i++) {
+                    ctx.beginPath();
+                    ctx.moveTo(-iconR*0.8, 0);
+                    ctx.lineTo(iconR*0.8, 0);
+                    ctx.stroke();
+                    ctx.rotate(Math.PI / 4);
+                }
+                ctx.restore();
+            }
+        }
+
+        function lighten(hex, amt) { return adjustColor(hex, amt); }
+        function darken(hex, amt) { return adjustColor(hex, -amt); }
+        function adjustColor(hex, amt) {
+            const num = parseInt(hex.slice(1), 16);
+            const r = Math.min(255, Math.max(0, (num>>16) + Math.round(255*amt)));
+            const g = Math.min(255, Math.max(0, ((num>>8)&0xFF) + Math.round(255*amt)));
+            const b = Math.min(255, Math.max(0, (num&0xFF) + Math.round(255*amt)));
+            return `rgb(${r},${g},${b})`;
+        }
+        function roundRect(ctx, x, y, w, h, r) {
+            ctx.moveTo(x+r, y);
+            ctx.arcTo(x+w, y, x+w, y+h, r);
+            ctx.arcTo(x+w, y+h, x, y+h, r);
+            ctx.arcTo(x, y+h, x, y, r);
+            ctx.arcTo(x, y, x+w, y, r);
+            ctx.closePath();
+        }
+
+        function drawBoard(ctx, grid, currentPiece=null) {
+            ctx.fillStyle = '#0d0f1a';
+            ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+
+            ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+            ctx.lineWidth = 1;
+            for(let i=0;i<=COLS;i++){ctx.beginPath();ctx.moveTo(i*BS,0);ctx.lineTo(i*BS,ROWS*BS);ctx.stroke();}
+            for(let i=0;i<=ROWS;i++){ctx.beginPath();ctx.moveTo(0,i*BS);ctx.lineTo(COLS*BS,i*BS);ctx.stroke();}
+
+            for(let y=0;y<ROWS;y++){
+                for(let x=0;x<COLS;x++){
+                    const cell = grid[y][x];
+                    if(!cell || cell===0) continue;
+                    if(cell==='BOMB')   { drawBlock(ctx,x,y,'BT','B'); continue; }
+                    if(cell==='PLANE')  { drawBlock(ctx,x,y,'PL','P'); continue; }
+                    if(cell==='SLOW')   { drawBlock(ctx,x,y,'SL','W'); continue; }
+                    if(cell==='FREEZE') { drawBlock(ctx,x,y,'FR','F'); continue; }
+                    drawBlock(ctx,x,y,cell);
+                }
+            }
+
+            if(currentPiece) {
+                let ghostY = currentPiece.y;
+                while(isValidMove({...currentPiece, y:ghostY+1})) ghostY++;
+                
+                if(ghostY !== currentPiece.y) {
+                    ctx.globalAlpha = 0.2;
+                    for(let py=0;py<currentPiece.shape.length;py++){
+                        for(let px2=0;px2<currentPiece.shape[py].length;px2++){
+                            const val = currentPiece.shape[py][px2];
+                            if(val) {
+                                if(val === 3) drawBlock(ctx, currentPiece.x+px2, ghostY+py, currentPiece.type, 'B');
+                                else if(val === 4) drawBlock(ctx, currentPiece.x+px2, ghostY+py, currentPiece.type, 'P');
+                                else if(val === 5) drawBlock(ctx, currentPiece.x+px2, ghostY+py, currentPiece.type, 'W');
+                                else if(val === 6) drawBlock(ctx, currentPiece.x+px2, ghostY+py, currentPiece.type, 'F');
+                                else drawBlock(ctx, currentPiece.x+px2, ghostY+py, currentPiece.type);
+                            }
+                        }
+                    }
+                    ctx.globalAlpha = 1;
+                }
+
+                for(let py=0;py<currentPiece.shape.length;py++){
+                    for(let px2=0;px2<currentPiece.shape[py].length;px2++){
+                        const val = currentPiece.shape[py][px2];
+                        if(val) {
+                            if(val === 3) drawBlock(ctx, currentPiece.x+px2, currentPiece.y+py, currentPiece.type, 'B');
+                            else if(val === 4) drawBlock(ctx, currentPiece.x+px2, currentPiece.y+py, currentPiece.type, 'P');
+                            else if(val === 5) drawBlock(ctx, currentPiece.x+px2, currentPiece.y+py, currentPiece.type, 'W');
+                            else if(val === 6) drawBlock(ctx, currentPiece.x+px2, currentPiece.y+py, currentPiece.type, 'F');
+                            else drawBlock(ctx, currentPiece.x+px2, currentPiece.y+py, currentPiece.type);
+                        }
+                    }
+                }
+            }
+        }
+
+        // ────────── PIECE LOGIC ──────────
+        function isValidMove(targetPiece, testGrid=myGrid) {
+            for(let y=0;y<targetPiece.shape.length;y++){
+                for(let x=0;x<targetPiece.shape[y].length;x++){
+                    if(targetPiece.shape[y][x]){
+                        const nx=targetPiece.x+x, ny=targetPiece.y+y;
+                        if(nx<0||nx>=COLS||ny>=ROWS) return false;
+                        if(ny>=0 && testGrid[ny][nx]!==0) return false;
+                    }
+                }
+            }
+            return true;
+        }
+
+        function lockPieceAndCheckLines() {
+            let isGameOver = false;
+
+            for(let y=0;y<piece.shape.length;y++){
+                for(let x=0;x<piece.shape[y].length;x++){
+                    const val = piece.shape[y][x];
+                    if(val){
+                        if(piece.y+y < 0) { isGameOver=true; continue; }
+                        if(val === 3)      myGrid[piece.y+y][piece.x+x] = 'BOMB';
+                        else if(val === 4) myGrid[piece.y+y][piece.x+x] = 'PLANE';
+                        else if(val === 5) myGrid[piece.y+y][piece.x+x] = 'SLOW';
+                        else if(val === 6) myGrid[piece.y+y][piece.x+x] = 'FREEZE';
+                        else               myGrid[piece.y+y][piece.x+x] = piece.type;
+                    }
+                }
+            }
+            if(isGameOver){ triggerGameOver(); return; }
+
+            const completedRows = [];
+            for(let row=0;row<ROWS;row++){
+                if(myGrid[row].every(cell=>cell!==0)) completedRows.push(row);
+            }
+
+            if(completedRows.length > 0) {
+                let hasSlow = false;
+                let hasFreeze = false;
+                const planeRows = []; 
+                const bombCols = [];
+                
+                for(const row of completedRows){
+                    let isPlaneRow = false;
+                    for(let c=0; c<COLS; c++){
+                        if(myGrid[row][c] === 'BOMB')   bombCols.push(c);
+                        if(myGrid[row][c] === 'PLANE')  isPlaneRow = true;
+                        if(myGrid[row][c] === 'SLOW')   hasSlow = true;
+                        if(myGrid[row][c] === 'FREEZE') hasFreeze = true;
+                    }
+                    if(isPlaneRow) planeRows.push(row);
+                }
+
+                const uniqueBombCols = [...new Set(bombCols)];
+                const rowsToDelete = completedRows.filter(r => !planeRows.includes(r));
+                
+                let linesCleared = 0;
+                const newGrid = myGrid.filter((row, i) => {
+                    if(rowsToDelete.includes(i)){ linesCleared++; return false; }
+                    return true;
+                });
+                while(newGrid.length < ROWS) newGrid.unshift(Array(COLS).fill(0));
+                myGrid = newGrid;
+
+                if(planeRows.length > 0){
+                    startPlaneAnimation();
+                }
+
+                if(uniqueBombCols.length > 0){
+                    audio.playBombExplode();
+                    uniqueBombCols.forEach(col => triggerBombExplosion(col));
+                    sendBombGarbageToOpponent(3 * uniqueBombCols.length);
+                }
+                
+                if(hasSlow){
+                    applySlowToMyself();
+                }
+
+                if(hasFreeze){
+                    sendFreezeToOpponent();
+                }
+                
+                if(uniqueBombCols.length === 0 && linesCleared > 0){
+                    sendGarbageToOpponent(linesCleared);
+                }
+            }
+
+            syncBoardToServer();
+            spawnPiece();
+        }
+
+        function triggerBombExplosion(bombCol) {
+            for(let row = 0; row < ROWS; row++){
+                myGrid[row][bombCol] = 0;
+            }
+            syncBoardToServer();
+            flashColumnExplosion(myCtx, bombCol, 0);
+        }
+
+        function flashSingleBlockExplosion(ctx, col, row) {
+            const cx = col * BS + BS / 2;
+            const cy = row * BS + BS / 2;
+            const particles = [];
+            const sc = BS / 24; // 스케일 배율 적용
+            for(let i = 0; i < 20; i++){
+                particles.push({
+                    x: cx + (Math.random()-0.5)*BS,
+                    y: cy + (Math.random()-0.5)*BS,
+                    vx:(Math.random()-0.5)*5 * sc, vy:(Math.random()-0.5)*5 * sc,
+                    r: (Math.random()*4+1) * sc, life: 1,
+                    color: ['#ef4444','#f97316','#fbbf24','#fff','#818cf8'][Math.floor(Math.random()*5)]
+                });
+            }
+            let frame = 0;
+            function draw(){
+                if(frame > 20) return;
+                for(const p of particles){
+                    ctx.globalAlpha = p.life * 0.9;
+                    ctx.fillStyle = p.color;
+                    ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI*2); ctx.fill();
+                    p.x += p.vx; p.y += p.vy; p.life -= 0.05;
+                }
+                ctx.globalAlpha = 1;
+                frame++;
+                requestAnimationFrame(draw);
+            }
+            draw();
+        }
+
+        function flashColumnExplosion(ctx, col, startRow = 0) {
+            const cH = ctx.canvas.height;
+            const startY = startRow * BS;
+            const cx = col * BS + BS / 2;
+            const particles = [];
+            const sc = BS / 24; 
+            for(let i = 0; i < 60; i++){
+                particles.push({
+                    x: cx + (Math.random()-0.5)*BS*3,
+                    y: startY + Math.random()*(cH - startY),
+                    vx:(Math.random()-0.5)*7 * sc, vy:(Math.random()-0.5)*6 * sc,
+                    r: (Math.random()*5+2) * sc, life: 1,
+                    color: ['#ef4444','#f97316','#fbbf24','#fff','#818cf8'][Math.floor(Math.random()*5)]
+                });
+            }
+            let frame = 0;
+            function draw(){
+                if(frame > 22) return;
+                for(const p of particles){
+                    ctx.globalAlpha = p.life * 0.9;
+                    ctx.fillStyle = p.color;
+                    ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI*2); ctx.fill();
+                    p.x += p.vx; p.y += p.vy; p.vy += 0.25 * sc; p.life -= 0.05;
+                }
+                ctx.globalAlpha = 1;
+                frame++;
+                requestAnimationFrame(draw);
+            }
+            draw();
+        }
+
+        function isSolidGridCell(cell) {
+            return cell !== 0 && cell !== null && cell !== undefined;
+        }
+
+        function findLaserHitRow(grid, col) {
+            if(!grid || col < 0 || col >= COLS) return -1;
+            for(let row = 0; row < ROWS; row++) {
+                if(grid[row] && isSolidGridCell(grid[row][col])) return row;
+            }
+            return -1;
+        }
+
+        // ────────── AIRPLANE ANIMATION ──────────
+        function startPlaneAnimation() {
+            audio.playPlaneAppear();
+            const rect = myCanvas.getBoundingClientRect();
+            const goRight = Math.random() > 0.5;
+            const startX  = goRight ? -60 : rect.width + 60;
+
+            planeCanvas.style.left   = rect.left + 'px';
+            planeCanvas.style.top    = rect.top  + 'px';
+            planeCanvas.style.width  = rect.width + 'px';
+            planeCanvas.style.height = rect.height + 'px';
+            planeCanvas.width  = rect.width;
+            planeCanvas.height = rect.height;
+            planeCanvas.style.display = 'block';
+
+            const shotCols = [...Array(10).keys()].sort(()=>Math.random()-0.5).slice(0, 4);
+
+            planeAnim = {
+                x: startX, y: 20, dir: goRight ? 1 : -1,
+                done: false,
+                shotCols,
+                shotsFired: 0,
+                shotTimer: 0,
+                bullets: [],
+                allShotsDone: false
+            };
+
+            notifyOppPlaneEvent();
+            animatePlane();
+        }
+
+        async function notifyOppPlaneEvent() {
+            if(!isPlaying||!currentRoom) return;
+            const roomRef = doc(db,'artifacts',appId,'public','data','rooms',currentRoom.id);
+            const isP1 = currentRoom.p1===currentUser.uid;
+            const field = isP1 ? 'p1PlaneEvent' : 'p2PlaneEvent';
+            const cur   = isP1 ? (currentRoom.p1PlaneEvent||0) : (currentRoom.p2PlaneEvent||0);
+            try{ await updateDoc(roomRef, {[field]: cur + 1}); }catch(e){}
+        }
+
+        function startOppPlaneAnimation() {
+            const rect = oppCanvas.getBoundingClientRect();
+            const goRight = Math.random() > 0.5;
+            const startX  = goRight ? -60 : rect.width + 60;
+
+            oppPlaneCanvas.style.left   = rect.left + 'px';
+            oppPlaneCanvas.style.top    = rect.top  + 'px';
+            oppPlaneCanvas.style.width  = rect.width + 'px';
+            oppPlaneCanvas.style.height = rect.height + 'px';
+            oppPlaneCanvas.width  = rect.width;
+            oppPlaneCanvas.height = rect.height;
+            oppPlaneCanvas.style.display = 'block';
+
+            const shotCols = [...Array(10).keys()].sort(()=>Math.random()-0.5).slice(0, 4);
+
+            oppPlaneAnim = {
+                x: startX, y: 20, dir: goRight ? 1 : -1,
+                done: false,
+                shotCols,
+                shotsFired: 0,
+                shotTimer: 0,
+                bullets: [],
+                allShotsDone: false
+            };
+
+            animateOppPlane();
+        }
+
+        function animateOppPlane() {
+            if(!oppPlaneAnim || oppPlaneAnim.done) { oppPlaneCanvas.style.display='none'; return; }
+            const a = oppPlaneAnim;
+            const sc = BS / 24;
+            const speed = 5 * sc; // 화면 비례 속도 증가
+            a.x += speed * a.dir;
+
+            const w = oppPlaneCanvas.width, h = oppPlaneCanvas.height;
+
+            const planeOut = (a.dir>0 && a.x > w+100) || (a.dir<0 && a.x < -100);
+            if(planeOut && a.bullets.length === 0) {
+                a.done = true;
+                oppPlaneCanvas.style.display = 'none';
+                return;
+            }
+
+            oppPlaneCtx.clearRect(0, 0, w, h);
+
+            a.shotTimer++;
+            if(!a.allShotsDone && a.shotTimer % 18 === 0 && a.shotsFired < a.shotCols.length) {
+                const col = a.shotCols[a.shotsFired];
+                const bx = col * BS + BS / 2;
+                a.bullets.push({ x: bx, y: a.y + 14*sc, col, hit: false, speed: (7 + Math.random() * 3)*sc, renderJitter: (Math.random() * 6 - 3)*sc });
+                a.shotsFired++;
+                if(a.shotsFired >= a.shotCols.length) a.allShotsDone = true;
+            }
+
+            const toRemove = [];
+            for(let i = 0; i < a.bullets.length; i++) {
+                const b = a.bullets[i];
+                if(b.hit) { toRemove.push(i); continue; }
+
+                b.y += b.speed;
+
+                const hitRow = findLaserHitRow(oppGrid, b.col);
+                if(hitRow !== -1) {
+                    const hitY = hitRow * BS + BS / 2;
+                    if(b.y >= hitY) {
+                        spawnOppHitParticles(b.x + (b.renderJitter || 0), hitY);
+                        b.hit = true;
+                        toRemove.push(i);
+                        continue;
+                    }
+                }
+
+                if(b.y > h + 10) { toRemove.push(i); continue; }
+
+                drawGalagaBullet(oppPlaneCtx, b.x + (b.renderJitter || 0), b.y);
+            }
+            for(let i = toRemove.length-1; i >= 0; i--) {
+                a.bullets.splice(toRemove[i], 1);
+            }
+
+            updateOppHitParticles(oppPlaneCtx);
+            if(!planeOut) drawPlane(oppPlaneCtx, a.x, a.y, a.dir>0);
+            requestAnimationFrame(animateOppPlane);
+        }
+
+        let oppHitParticles = [];
+        function spawnOppHitParticles(x, y) {
+            const sc = BS / 24;
+            for(let i=0; i<8; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const spd   = (1.5 + Math.random() * 3) * sc;
+                oppHitParticles.push({
+                    x, y,
+                    vx: Math.cos(angle)*spd, vy: Math.sin(angle)*spd,
+                    life: 1.0,
+                    r: (2 + Math.random()*3) * sc,
+                    color: ['#ffe040','#ff8800','#ffffff','#818cf8'][Math.floor(Math.random()*4)]
+                });
+            }
+        }
+        function updateOppHitParticles(ctx) {
+            const next = [];
+            const sc = BS / 24;
+            for(const p of oppHitParticles) {
+                ctx.globalAlpha = p.life * 0.9;
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.r, 0, Math.PI*2);
+                ctx.fill();
+                p.x += p.vx; p.y += p.vy; p.vy += 0.2 * sc; p.life -= 0.08;
+                if(p.life > 0) next.push(p);
+            }
+            ctx.globalAlpha = 1;
+            oppHitParticles = next;
+        }
+
+        function animatePlane() {
+            if(!planeAnim || planeAnim.done) { planeCanvas.style.display='none'; return; }
+            const a = planeAnim;
+            const sc = BS / 24;
+            const speed = 5 * sc; 
+            a.x += speed * a.dir;
+
+            const w = planeCanvas.width, h = planeCanvas.height;
+
+            const planeOut = (a.dir>0 && a.x > w+100) || (a.dir<0 && a.x < -100);
+            if(planeOut && a.bullets.length === 0) {
+                a.done = true;
+                planeCanvas.style.display = 'none';
+                return;
+            }
+
+            planeCtx.clearRect(0, 0, w, h);
+
+            a.shotTimer++;
+            if(!a.allShotsDone && a.shotTimer % 18 === 0 && a.shotsFired < a.shotCols.length) {
+                const col = a.shotCols[a.shotsFired];
+                const bx = col * BS + BS / 2;
+                a.bullets.push({ x: bx, y: a.y + 14*sc, col, hit: false, speed: (7 + Math.random() * 3)*sc, renderJitter: (Math.random() * 6 - 3)*sc });
+                a.shotsFired++;
+                audio.playGalagaShot();
+                if(a.shotsFired >= a.shotCols.length) a.allShotsDone = true;
+            }
+
+            const toRemove = [];
+            for(let i = 0; i < a.bullets.length; i++) {
+                const b = a.bullets[i];
+                if(b.hit) { toRemove.push(i); continue; }
+
+                b.y += b.speed;
+
+                const hitRow = findLaserHitRow(myGrid, b.col);
+                if(hitRow !== -1) {
+                    const hitY = hitRow * BS + BS / 2;
+                    if(b.y >= hitY) {
+                        myGrid[hitRow][b.col] = 0;
+                        syncBoardToServer();
+                        
+                        flashSingleBlockExplosion(myCtx, b.col, hitRow);
+                        spawnHitParticles(b.x + (b.renderJitter || 0), hitY);
+                        
+                        b.hit = true;
+                        toRemove.push(i);
+                        continue;
+                    }
+                }
+
+                if(b.y > h + 10) { toRemove.push(i); continue; }
+
+                drawGalagaBullet(planeCtx, b.x + (b.renderJitter || 0), b.y);
+            }
+            for(let i = toRemove.length-1; i >= 0; i--) {
+                a.bullets.splice(toRemove[i], 1);
+            }
+
+            updateHitParticles(planeCtx);
+            if(!planeOut) drawPlane(planeCtx, a.x, a.y, a.dir>0);
+            requestAnimationFrame(animatePlane);
+        }
+
+        // 총알 스케일 대응 수정
+        function drawGalagaBullet(ctx, x, y) {
+            ctx.save();
+            ctx.translate(x, y);
+            const sc = BS / 24;
+            ctx.scale(sc, sc);
+
+            const grad = ctx.createLinearGradient(0, -8, 0, 2);
+            grad.addColorStop(0, 'rgba(255,255,200,0)');
+            grad.addColorStop(0.3, 'rgba(255,240,80,1)');
+            grad.addColorStop(0.7, 'rgba(255,200,50,1)');
+            grad.addColorStop(1, 'rgba(255,100,0,0.6)');
+            ctx.strokeStyle = grad;
+            ctx.lineWidth = 3;
+            ctx.shadowBlur = 8;
+            ctx.shadowColor = '#ffe040';
+            ctx.beginPath();
+            ctx.moveTo(0, -8);
+            ctx.lineTo(0, 2);
+            ctx.stroke();
+            ctx.strokeStyle = 'rgba(255,255,255,0.95)';
+            ctx.lineWidth = 1.2;
+            ctx.shadowBlur = 4;
+            ctx.shadowColor = '#ffffff';
+            ctx.beginPath();
+            ctx.moveTo(0, -6);
+            ctx.lineTo(0, 0);
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+            
+            ctx.restore();
+        }
+
+        let hitParticles = [];
+        function spawnHitParticles(x, y) {
+            const sc = BS / 24;
+            for(let i=0; i<8; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const spd   = (1.5 + Math.random() * 3) * sc;
+                hitParticles.push({
+                    x, y,
+                    vx: Math.cos(angle)*spd, vy: Math.sin(angle)*spd,
+                    life: 1.0,
+                    r: (2 + Math.random()*3) * sc,
+                    color: ['#ffe040','#ff8800','#ffffff','#38bdf8'][Math.floor(Math.random()*4)]
+                });
+            }
+        }
+        function updateHitParticles(ctx) {
+            const next = [];
+            const sc = BS / 24;
+            for(const p of hitParticles) {
+                ctx.globalAlpha = p.life * 0.9;
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.r, 0, Math.PI*2);
+                ctx.fill();
+                p.x += p.vx; p.y += p.vy; p.vy += 0.2 * sc; p.life -= 0.08;
+                if(p.life > 0) next.push(p);
+            }
+            ctx.globalAlpha = 1;
+            hitParticles = next;
+        }
+
+        // 비행기 스케일 대응 수정
+        function drawPlane(ctx, x, y, facingRight) {
+            ctx.save();
+            ctx.translate(x, y);
+            if(!facingRight) ctx.scale(-1,1);
+            
+            const sc = BS / 24;
+            ctx.scale(sc, sc);
+
+            ctx.fillStyle='#94a3b8';
+            ctx.beginPath();
+            ctx.ellipse(0, 0, 28, 10, 0, 0, Math.PI*2);
+            ctx.fill();
+
+            ctx.fillStyle='#64748b';
+            ctx.beginPath();
+            ctx.moveTo(-10,0); ctx.lineTo(10,-22); ctx.lineTo(16,0); ctx.closePath();
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.moveTo(-22,0); ctx.lineTo(-28,-14); ctx.lineTo(-20,0); ctx.closePath();
+            ctx.fill();
+
+            ctx.fillStyle='#f97316';
+            ctx.globalAlpha=0.8;
+            ctx.beginPath(); ctx.ellipse(-30, 3, 8, 3, 0, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle='#fbbf24';
+            ctx.beginPath(); ctx.ellipse(-34, 3, 4, 2, 0, 0, Math.PI*2); ctx.fill();
+            ctx.globalAlpha=1;
+            ctx.restore();
+        }
+
+        // ────────── SPAWNING ──────────
+        function spawnPiece() {
+            const type = randomPiece();
+            piece = { type, shape: TETROMINOES[type].shape, x: 3, y: 0 };
+            if(!isValidMove(piece)) triggerGameOver();
+        }
+
+        function rotatePiece() {
+            const rotated = piece.shape[0].map((_,i)=>piece.shape.map(r=>r[i]).reverse());
+            const np = {...piece, shape:rotated};
+            if(isValidMove(np)) piece = np;
+        }
+
+        function hardDrop() {
+            while(isValidMove({...piece, y:piece.y+1})) piece.y++;
+            lockPieceAndCheckLines();
+        }
+
+        // ────────── SERVER SYNC ──────────
+        async function syncBoardToServer() {
+            if(!isPlaying||!currentRoom) return;
+            const roomRef = doc(db,'artifacts',appId,'public','data','rooms',currentRoom.id);
+            const isP1 = currentRoom.p1===currentUser.uid;
+            try{ await updateDoc(roomRef, isP1?{p1Board:JSON.stringify(myGrid),lastActivity:Date.now()}:{p2Board:JSON.stringify(myGrid),lastActivity:Date.now()}); }catch(e){}
+        }
+
+        async function sendGarbageToOpponent(n) {
+            if(!isPlaying||!currentRoom) return;
+            audio.playAttackSound();
+            const roomRef = doc(db,'artifacts',appId,'public','data','rooms',currentRoom.id);
+            const isP1 = currentRoom.p1===currentUser.uid;
+            const field = isP1?'linesSentToP2':'linesSentToP1';
+            const cur   = isP1?currentRoom.linesSentToP2:currentRoom.linesSentToP1;
+            try{ await updateDoc(roomRef,{[field]:cur+n}); }catch(e){}
+        }
+
+        async function sendBombGarbageToOpponent(n) {
+            if(!isPlaying||!currentRoom) return;
+            const roomRef = doc(db,'artifacts',appId,'public','data','rooms',currentRoom.id);
+            const isP1 = currentRoom.p1===currentUser.uid;
+            const field = isP1?'linesSentToP2':'linesSentToP1';
+            const cur   = isP1?currentRoom.linesSentToP2:currentRoom.linesSentToP1;
+            try{ await updateDoc(roomRef,{[field]:cur+n}); }catch(e){}
+        }
+
+        // 느림 효과를 나 자신에게 적용
+        function applySlowToMyself() {
+            if(!isPlaying) return;
+            
+            showFloatingText('🐢 속도 감소!', '#34d399');
+            
+            dropInterval = SLOW_DROP_INTERVAL;
+            const statusDiv = document.getElementById('gameStatus');
+            statusDiv.innerText = '🐢 느림 발동! (5초)';
+            statusDiv.style.color = '#34d399';
+            
+            if(slowTimer) clearTimeout(slowTimer);
+            slowTimer = setTimeout(()=>{
+                dropInterval = NORMAL_DROP_INTERVAL;
+                if(statusDiv.innerText.includes('느림')) {
+                    statusDiv.innerText = '';
+                    statusDiv.style.color = '';
+                }
+            }, 5000);
+        }
+
+        // 멈춤 효과를 상대에게 전송
+        async function sendFreezeToOpponent() {
+            if(!isPlaying||!currentRoom) return;
+            const roomRef = doc(db,'artifacts',appId,'public','data','rooms',currentRoom.id);
+            const isP1 = currentRoom.p1===currentUser.uid;
+            const field = isP1 ? 'p2FreezeEvent' : 'p1FreezeEvent';
+            const cur   = isP1 ? (currentRoom.p2FreezeEvent||0) : (currentRoom.p1FreezeEvent||0);
+            try{ await updateDoc(roomRef, {[field]: cur + 1}); }catch(e){}
+        }
+
+        // 멈춤 효과를 나 자신에게 적용 (수신 시)
+        function applyFreezeToMyself() {
+            if(!isPlaying) return;
+            isFrozen = true;
+            
+            showFloatingText('❄️ 얼음! (조작불가)', '#93c5fd');
+
+            const statusDiv = document.getElementById('gameStatus');
+            statusDiv.innerText = '❄️ 얼음! (5초간 조작 불가)';
+            statusDiv.style.color = '#93c5fd';
+            
+            if(freezeTimer) clearTimeout(freezeTimer);
+            freezeTimer = setTimeout(()=>{
+                isFrozen = false;
+                if(statusDiv.innerText.includes('얼음')) {
+                    statusDiv.innerText = '';
+                    statusDiv.style.color = '';
+                }
+            }, 5000);
+        }
+
+        async function triggerGameOver() {
+            isPlaying=false; audio.stopBGM();
+            if(!currentRoom) return;
+            const roomRef = doc(db,'artifacts',appId,'public','data','rooms',currentRoom.id);
+            const isP1 = currentRoom.p1===currentUser.uid;
+            try{ await updateDoc(roomRef,{winner:isP1?currentRoom.p2:currentRoom.p1}); }catch(e){}
+        }
+
+        function receiveGarbage(n) {
+            if(n<=0||!isPlaying) return;
+            myGrid = myGrid.slice(n);
+            for(let i=0;i<n;i++){
+                const hole=Math.floor(Math.random()*COLS);
+                const row=Array(COLS).fill('G');
+                row[hole]=0;
+                myGrid.push(row);
+            }
+            syncBoardToServer();
+        }
+
+        // ────────── GAME LOOP ──────────
+        function gameLoop(ts) {
+            if(!isPlaying) return;
+            
+            if(ts-lastDropTime > dropInterval){
+                const np={...piece,y:piece.y+1};
+                if(isValidMove(np)) piece=np; else lockPieceAndCheckLines();
+                lastDropTime=ts;
+            }
+            drawBoard(myCtx, myGrid, piece);
+            drawBoard(oppCtx, oppGrid);
+            animationFrameId=requestAnimationFrame(gameLoop);
+        }
+
+        // 키보드 조작 이벤트: isFrozen일 경우 조작 무시
+        document.addEventListener('keydown',(e)=>{
+            if(!isPlaying || isFrozen) return; 
+            switch(e.key){
+                case 'ArrowLeft':  if(isValidMove({...piece,x:piece.x-1})) piece.x--; break;
+                case 'ArrowRight': if(isValidMove({...piece,x:piece.x+1})) piece.x++; break;
+                case 'ArrowDown':  if(isValidMove({...piece,y:piece.y+1})) piece.y++; break;
+                case 'ArrowUp':    rotatePiece(); break;
+                case ' ':          e.preventDefault(); hardDrop(); break;
+            }
+            if(isPlaying) drawBoard(myCtx,myGrid,piece);
+        });
+
+        // ────────── AUTH & LOBBY ──────────
+        async function initApp(){
+            try{ await signInAnonymously(auth); }
+            catch(err){ document.getElementById('loadingScreen').innerText='인증 실패. Firebase 설정을 확인하세요.'; return; }
+            onAuthStateChanged(auth,(user)=>{
+                if(user){ currentUser=user; document.getElementById('userInfo').innerText=`UID: ${user.uid.substring(0,8)}`; listenToRooms(); showScreen('lobbyScreen'); }
+            });
+        }
+
+        const ROOM_EXPIRE_MS = 10 * 60 * 1000; 
+
+        function listenToRooms(){
+            const ref=collection(db,'artifacts',appId,'public','data','rooms');
+            roomsSnapshotUnsubscribe=onSnapshot(ref,(snap)=>{
+                const now = Date.now();
+                const rooms = snap.docs.map(d=>({id:d.id,...d.data()}));
+                rooms.forEach(room=>{
+                    const age = now - (room.lastActivity || 0);
+                    if(age > ROOM_EXPIRE_MS){
+                        deleteDoc(doc(db,'artifacts',appId,'public','data','rooms',room.id)).catch(()=>{});
+                    }
+                });
+                const activeRooms = rooms.filter(room=>{
+                    const age = now - (room.lastActivity || 0);
+                    return age <= ROOM_EXPIRE_MS;
+                });
+                renderLobby(activeRooms);
+            });
+        }
+
+        function renderLobby(rooms){
+            const listDiv=document.getElementById('roomList');
+            listDiv.innerHTML='';
+            if(!rooms.length){ listDiv.innerHTML='<div class="empty-rooms">현재 개설된 방이 없습니다.</div>'; return; }
+            rooms.forEach(room=>{
+                const isMyRoom=room.p1===currentUser.uid;
+                const badge=room.status==='waiting'
+                    ?'<span class="badge badge-wait">대기 중</span>'
+                    :'<span class="badge badge-play">진행 중</span>';
+                let btns='';
+                if(room.status==='waiting'&&!isMyRoom){
+                    btns=`<button onclick="joinRoom('${room.id}')" class="btn btn-join">참여하기</button>`;
+                } else if(isMyRoom){
+                    btns=`<div style="display:flex;gap:8px"><span class="btn btn-ghost" style="cursor:default">내 방</span><button onclick="deleteRoomDirect('${room.id}')" class="btn btn-danger">삭제</button></div>`;
+                } else {
+                    btns=`<button disabled class="btn btn-ghost" style="opacity:0.4;cursor:not-allowed">참여불가</button>`;
+                }
+                listDiv.innerHTML+=`<div class="room-item"><div><span style="font-weight:700;margin-right:8px">${room.title||'이름 없는 방'}</span><span style="font-size:11px;color:var(--muted);margin-right:8px">(ID:${room.id})</span>${badge}</div>${btns}</div>`;
+            });
+        }
+
+        window.deleteRoomDirect=async(roomId)=>{
+            if(!confirm('정말 이 방을 삭제하시겠습니까?')) return;
+            try{ await deleteDoc(doc(db,'artifacts',appId,'public','data','rooms',roomId)); alert('방이 삭제되었습니다.'); }
+            catch(e){ alert('삭제 실패: '+e.message); }
+        };
+
+        window.addEventListener('beforeunload', (e) => {
+            if (currentRoom && currentUser && currentRoom.p1 === currentUser.uid) {
+                const ref = doc(db, 'artifacts', appId, 'public', 'data', 'rooms', currentRoom.id);
+                deleteDoc(ref);
+            }
+        });
+
+        async function createRoom(){
+            if(!currentUser){ alert('로그인 정보가 없습니다.'); return; }
+            const title=(document.getElementById('roomTitleInput').value.trim())||`${currentUser.uid.substring(0,4)}님의 방`;
+            try{
+                const roomId=Math.random().toString(36).substring(2,8);
+                const roomRef=doc(db,'artifacts',appId,'public','data','rooms',roomId);
+                await setDoc(roomRef,{
+                    id:roomId, title, status:'waiting', p1:currentUser.uid, p2:null,
+                    p1Board:JSON.stringify(createEmptyGrid()), p2Board:JSON.stringify(createEmptyGrid()),
+                    linesSentToP1:0, linesSentToP2:0, winner:null,
+                    p1NewGame:false, p2NewGame:false,
+                    p1PlaneEvent:0, p2PlaneEvent:0,
+                    p1FreezeEvent:0, p2FreezeEvent:0,
+                    lastActivity: Date.now()
+                });
+                document.getElementById('roomTitleInput').value='';
+                enterRoom(roomId);
+            }catch(e){ alert('방 생성 실패!\n\n'+e.message); }
+        }
+
+        window.joinRoom=async(roomId)=>{
+            if(!currentUser) return;
+            audio.init();
+            await updateDoc(doc(db,'artifacts',appId,'public','data','rooms',roomId),{p2:currentUser.uid,status:'playing',lastActivity:Date.now()});
+            enterRoom(roomId);
+        };
+
+        function enterRoom(roomId){
+            showScreen('gameScreen');
+            resizeCanvases();
+            myGrid=createEmptyGrid(); oppGrid=createEmptyGrid();
+            handledGarbage=0; handledPlaneEvent=0; 
+            handledFreezeEvent=0; isFrozen=false; 
+            if(freezeTimer) clearTimeout(freezeTimer);
+            if(slowTimer) clearTimeout(slowTimer);
+            dropInterval = NORMAL_DROP_INTERVAL;
+            isPlaying=false; 
+            planeAnim=null; oppPlaneAnim=null;
+            document.getElementById('myOverlay').classList.add('hidden');
+            if(roomSnapshotUnsubscribe) roomSnapshotUnsubscribe();
+            const ref=doc(db,'artifacts',appId,'public','data','rooms',roomId);
+            roomSnapshotUnsubscribe=onSnapshot(ref,(snap)=>{
+                if(!snap.exists()){ exitRoom(); return; }
+                currentRoom=snap.data(); handleRoomUpdate(currentRoom);
+            });
+        }
+
+        function handleRoomUpdate(room){
+            const isP1=room.p1===currentUser.uid;
+            document.getElementById('myRole').innerText=isP1?' (Host)':' (Guest)';
+            document.getElementById('oppRole').innerText=!isP1?' (Host)':' (Guest)';
+            document.getElementById('btnLeaveRoom').innerText=isP1?'방 삭제하고 나가기':'방 나가기';
+
+            const myReady  = isP1 ? room.p1NewGame : room.p2NewGame;
+            const oppReady = isP1 ? room.p2NewGame : room.p1NewGame;
+
+            const statusDiv=document.getElementById('gameStatus');
+            if(myReady && !oppReady){
+                statusDiv.innerText='새게임 요청 중... 상대방 수락 대기';
+            }
+            const btnNew = document.getElementById('btnNewGame');
+            if(myReady && !oppReady){ btnNew.innerText='⏳ 수락 대기 중...'; btnNew.disabled=true; }
+            else if(!myReady && oppReady){ btnNew.innerText='✅ 새게임 수락'; btnNew.disabled=false; }
+            else { btnNew.innerText='🔄 새게임'; btnNew.disabled=false; }
+
+            if(room.p1NewGame && room.p2NewGame){
+                if(isP1){
+                    const ref = doc(db,'artifacts',appId,'public','data','rooms',room.id);
+                    updateDoc(ref,{
+                        status:'playing', winner:null,
+                        p1Board:JSON.stringify(createEmptyGrid()),
+                        p2Board:JSON.stringify(createEmptyGrid()),
+                        linesSentToP1:0, linesSentToP2:0,
+                        p1NewGame:false, p2NewGame:false,
+                        p1PlaneEvent:0, p2PlaneEvent:0,
+                        p1FreezeEvent:0, p2FreezeEvent:0,
+                    }).catch(()=>{});
+                }
+                resetGameInRoom(room);
+                return; 
+            }
+
+            const oppOverlay=document.getElementById('oppOverlay');
+
+            if(room.status==='playing'&&!room.winner&&!isPlaying){
+                isPlaying=true;
+                oppOverlay.classList.add('hidden');
+                if(!myReady && !oppReady && !isFrozen && dropInterval === NORMAL_DROP_INTERVAL) statusDiv.innerText='';
+                spawnPiece(); audio.playBGM();
+                animationFrameId=requestAnimationFrame(gameLoop);
+            } else if(room.status==='waiting'){
+                oppOverlay.classList.remove('hidden');
+                statusDiv.innerText='상대방을 기다리는 중...';
+            }
+
+            if(isPlaying||room.winner){
+                try{ const d=isP1?room.p2Board:room.p1Board; if(d) oppGrid=JSON.parse(d); drawBoard(oppCtx,oppGrid); }catch(e){}
+            }
+
+            if(isPlaying){
+                const incoming=isP1?room.linesSentToP1:room.linesSentToP2;
+                const newGarbage=incoming-handledGarbage;
+                if(newGarbage>0){ receiveGarbage(newGarbage); handledGarbage=incoming; }
+
+                const oppPlaneEventCount = isP1 ? (room.p2PlaneEvent||0) : (room.p1PlaneEvent||0);
+                if(oppPlaneEventCount > handledPlaneEvent) {
+                    handledPlaneEvent = oppPlaneEventCount;
+                    if(!oppPlaneAnim || oppPlaneAnim.done) {
+                        startOppPlaneAnimation();
+                    }
+                }
+
+                const myFreezeEventCount = isP1 ? (room.p1FreezeEvent||0) : (room.p2FreezeEvent||0);
+                if(myFreezeEventCount > handledFreezeEvent) {
+                    handledFreezeEvent = myFreezeEventCount;
+                    applyFreezeToMyself();
+                }
+            }
+
+            if(room.winner){
+                isPlaying=false; audio.stopBGM();
+                cancelAnimationFrame(animationFrameId);
+                const ov=document.getElementById('myOverlay');
+                ov.classList.remove('hidden');
+                if(room.winner===currentUser.uid){
+                    ov.innerText='🏆 YOU WIN!';
+                    ov.className='overlay overlay-win';
+                } else {
+                    ov.innerText='💀 YOU LOSE';
+                    ov.className='overlay overlay-lose';
+                }
+                statusDiv.innerText='GAME OVER';
+            }
+        }
+
+        async function exitRoom(){
+            if(currentRoom&&currentUser){
+                const ref=doc(db,'artifacts',appId,'public','data','rooms',currentRoom.id);
+                if(currentRoom.p1===currentUser.uid){ try{await deleteDoc(ref);}catch(e){} }
+                else{ try{await updateDoc(ref,{p2:null,status:'waiting'});}catch(e){} }
+            }
+            isPlaying=false; currentRoom=null; audio.stopBGM();
+            if(animationFrameId) cancelAnimationFrame(animationFrameId);
+            if(roomSnapshotUnsubscribe){ roomSnapshotUnsubscribe(); roomSnapshotUnsubscribe=null; }
+            planeCanvas.style.display='none';
+            oppPlaneCanvas.style.display='none';
+            planeAnim=null; oppPlaneAnim=null; handledPlaneEvent=0;
+            showScreen('lobbyScreen');
+        }
+
+        async function requestNewGame(){
+            if(!currentRoom||!currentUser) return;
+            const isP1 = currentRoom.p1===currentUser.uid;
+            const ref = doc(db,'artifacts',appId,'public','data','rooms',currentRoom.id);
+            const myReadyField = isP1 ? 'p1NewGame' : 'p2NewGame';
+            try {
+                await updateDoc(ref, { [myReadyField]: true });
+            } catch(e) {}
+        }
+
+        function resetGameInRoom(room) {
+            isPlaying = false;
+            audio.stopBGM();
+            if(animationFrameId) cancelAnimationFrame(animationFrameId);
+            planeCanvas.style.display = 'none';
+            oppPlaneCanvas.style.display = 'none';
+            planeAnim = null; oppPlaneAnim = null; handledPlaneEvent = 0;
+            handledGarbage = 0; 
+            handledFreezeEvent = 0; 
+            isFrozen = false; 
+            dropInterval = NORMAL_DROP_INTERVAL;
+            if(freezeTimer) clearTimeout(freezeTimer);
+            if(slowTimer) clearTimeout(slowTimer);
+            
+            myGrid  = createEmptyGrid();
+            oppGrid = createEmptyGrid();
+            piece   = null;
+            hitParticles = [];
+
+            const myOv  = document.getElementById('myOverlay');
+            const oppOv = document.getElementById('oppOverlay');
+            myOv.classList.add('hidden');
+
+            const isP1 = room.p1===currentUser.uid;
+            const hasOpp = isP1 ? !!room.p2 : !!room.p1;
+            if(!hasOpp){
+                oppOv.classList.remove('hidden');
+                document.getElementById('gameStatus').innerText='상대방을 기다리는 중...';
+            } else {
+                oppOv.classList.add('hidden');
+            }
+
+            resizeCanvases();
+            drawBoard(myCtx,  myGrid);
+            drawBoard(oppCtx, oppGrid);
+        }
+
+        document.getElementById('btnCreateRoom').addEventListener('click',()=>{ audio.init(); createRoom(); });
+        document.getElementById('btnLeaveRoom').addEventListener('click', exitRoom);
+        document.getElementById('btnNewGame').addEventListener('click', requestNewGame);
+
+        window.addEventListener('resize', ()=>{
+            if(!document.getElementById('gameScreen').classList.contains('hidden')) resizeCanvases();
+        });
+
+        initApp();
+    </script>
+</body>
+</html>

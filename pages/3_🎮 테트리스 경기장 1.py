@@ -36,7 +36,7 @@ if mode == "🎮 대회 선수 (인증 필요)":
         st.success("✅ 선수 인증 완료! 아래 버튼을 눌러 게임 파일을 다운로드하세요.")
         
         # 파일 경로 확인
-        html_path = Path("static/cyber_duel_tetris_v7.html")
+        html_path = Path("static/cyber_duel_tetris_v13.html")
         if html_path.exists():
             with open(html_path, "rb") as f:
                 st.download_button(
@@ -70,7 +70,7 @@ elif mode == "👀 관전 및 응원 모드":
         with col_game:
             st.caption("💡 게임 화면 내부의 버튼을 눌러 관전하세요.")
             # 경로 수정: static 파일을 정확히 가리킴
-            st.iframe("./static/cyber_duel_tetris_v7.html", height=800)
+            st.iframe("./static/cyber_duel_tetris_v11.html", height=800)
                     
         with col_chat:
             st.subheader("💬 라이브 채팅")
