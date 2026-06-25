@@ -70,7 +70,7 @@ elif mode == "👀 관전 및 응원 모드":
         with col_game:
             st.caption("💡 게임 화면 내부의 버튼을 눌러 관전하세요.")
             # 경로 수정: static 파일을 정확히 가리킴
-            st.iframe("./static/snake.html", height=800)
+            st.iframe("./static/cyber_duel_tetris_v7.html", height=800)
                     
         with col_chat:
             st.subheader("💬 라이브 채팅")
@@ -100,11 +100,3 @@ elif mode == "👀 관전 및 응원 모드":
 
 
 
-# import streamlit as st
-
-# st.set_page_config(page_title="vampire_survival", layout="wide")
-
-# st.title("👻 vampire_survival")
-
-# # 게임 화면을 불러옵니다
-# st.iframe("./static/vampire_survival.html", height=800)
