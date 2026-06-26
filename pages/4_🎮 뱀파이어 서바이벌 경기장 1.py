@@ -36,13 +36,13 @@ if mode == "🎮 대회 선수 (인증 필요)":
         st.success("✅ 선수 인증 완료! 아래 버튼을 눌러 게임 파일을 다운로드하세요.")
         
         # 파일 경로 확인
-        html_path = Path("static/vampire_survival.html")
+        html_path = Path("static/vampire_ultimate.html")
         if html_path.exists():
             with open(html_path, "rb") as f:
                 st.download_button(
                     label="🎮 테트리스 게임 다운로드 (실행용)",
                     data=f,
-                    file_name="vampire_survival.html",
+                    file_name="vampire_ultimate.html",
                     mime="text/html",
                     type="primary"
                 )
@@ -70,7 +70,7 @@ elif mode == "👀 관전 및 응원 모드":
         with col_game:
             st.caption("💡 게임 화면 내부의 버튼을 눌러 관전하세요.")
             # 경로 수정: static 파일을 정확히 가리킴
-            st.iframe("./static/vampire_survival.html", height=800)
+            st.iframe("./static/vampire_ultimate.html", height=800)
                     
         with col_chat:
             st.subheader("💬 라이브 채팅")
