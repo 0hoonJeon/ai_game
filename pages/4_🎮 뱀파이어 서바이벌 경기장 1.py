@@ -17,7 +17,7 @@ st.title("🎮 라이브 게임 경기장")
 st.markdown("선수는 인증 후 파일을 다운로드하여 경기를 진행하고, 관전자는 실시간 채팅으로 응원하세요!")
 st.divider()
 
-mode = st.radio("역할 선택:", ["👀 관전 및 응원 모드", "🎮 대회 선수 (인증 필요)"], horizontal=True)
+mode = st.radio("역할 선택:", ["👀 연습게임", "🎮 대회 선수 (인증 필요)"], horizontal=True)
 
 # ── [1. 선수 모드] ──
 if mode == "🎮 대회 선수 (인증 필요)":
