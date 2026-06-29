@@ -1,0 +1,898 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cyber-Duel Tetris Ultimate</title>
+    <link href="https://api.fontshare.com/v2/css?f[]=cabinet-grotesk@400,700,900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg:       #0d0f1a;
+            --surface:  #141726;
+            --surface2: #1c2035;
+            --border:   #2a3050;
+            --accent:   #38bdf8;
+            --accent2:  #818cf8;
+            --danger:   #f43f5e;
+            --gold:     #fbbf24;
+            --green:    #34d399;
+            --text:     #e2e8f0;
+            --muted:    #64748b;
+            --team-red: #f43f5e;
+            --team-blue:#38bdf8;
+            --font:     'Cabinet Grotesk', 'Segoe UI', sans-serif;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: var(--font); background: var(--bg); color: var(--text); height: 100vh; display: flex; flex-direction: column; align-items: center; overflow: hidden; }
+
+        /* ── HEADER ── */
+        header { width: 100%; padding: 12px 28px; border-bottom: 1px solid var(--border); background: linear-gradient(90deg, #0d0f1a 0%, #141726 100%); display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 20px rgba(56,189,248,0.08); z-index: 10; }
+        .logo { font-size: 22px; font-weight: 900; letter-spacing: 2px; background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-transform: uppercase; }
+        #userInfo { font-size: 13px; font-weight: 700; color: var(--accent); }
+
+        /* ── COMMON UI ── */
+        .hidden { display: none !important; }
+        .screen-container { flex: 1; width: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; overflow-y: auto; padding: 20px; }
+        input, select { padding: 10px 14px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-family: var(--font); font-size: 14px; outline: none; }
+        input:focus, select:focus { border-color: var(--accent); }
+        .btn { cursor: pointer; font-family: var(--font); font-weight: 700; border: none; border-radius: 8px; padding: 10px 20px; font-size: 14px; transition: all 0.18s; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-primary { background: var(--accent); color: #0d0f1a; box-shadow: 0 0 12px rgba(56,189,248,0.3); }
+        .btn-primary:hover:not(:disabled) { background: #7dd3fc; transform: translateY(-1px); }
+        .btn-danger { background: var(--danger); color: #fff; }
+        .btn-ghost { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+        
+        /* ── LOBBY / SETUP ── */
+        .panel { background: var(--surface); padding: 30px; border-radius: 16px; border: 1px solid var(--border); width: 100%; max-width: 800px; margin-bottom: 20px; box-shadow: 0 0 40px rgba(56,189,248,0.07); }
+        .room-item { display: flex; justify-content: space-between; align-items: center; padding: 14px 16px; background: var(--surface2); border-radius: 10px; border: 1px solid var(--border); margin-bottom: 8px; }
+        .badge { font-size: 11px; padding: 3px 10px; border-radius: 99px; font-weight: 700; margin-left: 8px; }
+        .badge-red { background: rgba(244,63,94,0.12); color: var(--danger); }
+        .badge-blue { background: rgba(56,189,248,0.12); color: var(--accent); }
+        
+        .rules-box { margin-top: 20px; padding: 16px; background: var(--bg); border-radius: 10px; border: 1px solid var(--border); font-size: 13px; color: var(--muted); }
+        .rules-box h3 { color: var(--accent); margin-bottom: 8px; font-size: 14px; }
+        .rules-box li { margin-bottom: 4px; padding-left: 14px; position: relative; line-height: 1.4; }
+        .rules-box li::before { content: '▸'; position: absolute; left: 0; color: var(--accent2); }
+
+        .player-slot { padding: 12px; margin: 8px 0; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: 0.2s; }
+        .player-slot:hover { border-color: var(--gold); }
+
+        /* ── GAME SCREEN & DYNAMIC LAYOUT ── */
+        #gameScreen { padding: 10px; width: 100%; height: 100%; max-width: 1600px; display: flex; flex-direction: column; align-items: stretch; justify-content: flex-start; overflow: hidden; }
+        .game-topbar { display: flex; justify-content: space-between; align-items: center; padding: 10px 18px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 10px; flex-shrink: 0; }
+        #gameStatus { font-size: 18px; font-weight: 900; color: var(--gold); }
+        
+        .battlefield { display: flex; flex-wrap: wrap; gap: 2vw; justify-content: center; align-items: center; flex: 1; width: 100%; height: 100%; overflow: hidden; }
+        .board-wrap { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .board-wrap canvas { display: block; background: var(--bg); border: 2px solid var(--border); border-radius: 6px; box-shadow: 0 0 24px rgba(0,0,0,0.5); image-rendering: pixelated; }
+        
+        /* 💡 수정됨: 레이아웃 왜곡을 막기 위해 transform: scale 제거 */
+        .board-wrap.is-me { z-index: 5; margin: 0 1vw; }
+        .board-wrap.is-me canvas { border-color: var(--accent); box-shadow: 0 0 25px rgba(56,189,248,0.3); }
+        .board-wrap.dead canvas { filter: grayscale(100%) opacity(0.5); }
+        .team-red canvas { border-color: var(--team-red); box-shadow: 0 0 15px rgba(244,63,94,0.3); }
+        .team-blue canvas { border-color: var(--team-blue); box-shadow: 0 0 15px rgba(56,189,248,0.3); }
+        
+        .player-name-tag { text-align: center; font-weight: 900; margin-bottom: 6px; font-size: 15px; letter-spacing: 1px; color: var(--text); background: var(--surface2); padding: 4px 12px; border-radius: 12px; border: 1px solid var(--border); }
+        
+        .overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: 900; text-align: center; border-radius: 6px; z-index: 10; letter-spacing: 2px; }
+        .overlay-wait { background: rgba(13,15,26,0.85); color: var(--muted); border: 1px dashed var(--border); font-size: 15px; }
+        .overlay-dead { background: rgba(244,63,94,0.3); color: var(--danger); border: 2px solid var(--danger); text-shadow: 0 0 20px var(--danger); }
+        .overlay-win { background: rgba(52,211,153,0.3); color: var(--green); border: 2px solid var(--green); text-shadow: 0 0 20px var(--green); }
+        
+        .floating-text { position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%) scale(0.5); font-size: 24px; font-weight: 900; text-align: center; pointer-events: none; opacity: 0; z-index: 200; white-space: nowrap; }
+        .floating-text.show { animation: popFade 2s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+        @keyframes popFade { 0% { opacity: 0; transform: translate(-50%, -20%) scale(0.5); } 15% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); } 80% { opacity: 1; transform: translate(-50%, -50%) scale(1); } 100% { opacity: 0; transform: translate(-50%, -80%) scale(0.9); } }
+        
+        canvas.effect-layer { position: absolute; top: 0; left: 0; pointer-events: none; z-index: 100; background: transparent !important; border: none !important; box-shadow: none !important; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <span class="logo">⚡ Cyber-Duel Tetris Ultimate</span>
+        <div id="userInfo">인증 대기 중...</div>
+    </header>
+
+    <div id="loginScreen" class="screen-container">
+        <div class="panel" style="max-width: 400px; text-align: center;">
+            <h2 style="margin-bottom:15px; color:var(--accent);">요원 식별 (닉네임 설정)</h2>
+            <input type="text" id="nicknameInput" placeholder="닉네임을 입력하세요" maxlength="10" style="margin-bottom:15px; width:100%;"><br>
+            <button id="btnLogin" class="btn btn-primary" style="width:100%;" disabled>서버 인증 중...</button>
+        </div>
+    </div>
+
+    <div id="lobbyScreen" class="screen-container hidden">
+        <div class="panel">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                <h2>접속 가능한 게임 방</h2>
+                <div style="display:flex; gap:10px;">
+                    <select id="roomModeSelect">
+                        <option value="1v1">1:1 대전</option>
+                        <option value="ffa3">3인 개인전</option>
+                        <option value="ffa4">4인 개인전</option>
+                        <option value="team2v2">2:2 팀전</option>
+                    </select>
+                    <input type="text" id="roomTitleInput" placeholder="방 제목" style="width:150px;">
+                    <button id="btnCreateRoom" class="btn btn-primary">+ 방 만들기</button>
+                </div>
+            </div>
+            <div id="roomList" style="width:100%; display:flex; flex-direction:column;"></div>
+            
+            <div class="rules-box">
+                <h3>📖 조작 방법 및 룰 (다인전 특수 아이템 스마트 타겟팅)</h3>
+                <ul style="list-style:none">
+                    <li>방향키: 이동 및 회전(위) &nbsp;|&nbsp; 스페이스바: 단번에 내리기(하드드롭)</li>
+                    <li><strong>개인전 타겟팅:</strong> 공격 및 방해 아이템은 살아남은 적 중 <strong>가장 블록이 높이 쌓인 1등</strong>을 자동 공격합니다.</li>
+                    <li>💣 폭탄 블록 → 착탄 세로줄 즉시 삭제 + 타겟에게 3줄 방해 블록.</li>
+                    <li>🐢 느림 블록 → 내 낙하속도가 5초간 느려집니다 (자신 버프).</li>
+                    <li>❄️ 멈춤 블록 → 타겟의 키보드 조작을 3초간 무시합니다.</li>
+                    <li>✨ 정화 블록 → 내 바닥에 쌓인 블록 3줄을 즉시 파괴합니다 (자신 버프).</li>
+                    <li>🕶️ 암전 블록 → 타겟의 쌓인 블록들을 4초간 보이지 않게 가립니다.</li>
+                    <li>✈️ 비행기 블록 → 전투기가 폭탄을 투하하여 타겟의 보드 최상단 블록들을 파괴합니다.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div id="waitingScreen" class="screen-container hidden">
+        <div class="panel" style="max-width: 600px;">
+            <h2 id="waitRoomTitle" style="color:var(--accent); margin-bottom:10px;">대기실</h2>
+            <p id="waitRoomMode" style="color:var(--gold); margin-bottom:20px; font-weight:700;"></p>
+            
+            <div id="playersList" style="width:100%; margin-bottom:20px;"></div>
+            <p style="font-size:12px; color:var(--muted); margin-bottom:15px;">※ 방장은 플레이어 슬롯을 클릭하여 팀(Red/Blue)을 변경할 수 있습니다.</p>
+            
+            <div style="display:flex; gap:10px;">
+                <button id="btnStartGame" class="btn btn-primary hidden">게임 시작</button>
+                <button id="btnLeaveWait" class="btn btn-danger">방 퇴장</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="gameScreen" class="screen-container hidden" style="padding:0;">
+        <div class="game-topbar">
+            <div>Mode: <span id="gameModeBadge" style="color:var(--accent);"></span></div>
+            <div id="gameStatus">전투 준비 완료</div>
+            <div style="display: flex; gap: 8px;">
+                <button id="btnNewGame" class="btn btn-primary hidden">새게임 (대기실로)</button>
+                <button id="btnLeaveGame" class="btn btn-danger">이탈</button>
+            </div>
+        </div>
+        <div class="battlefield" id="battlefield"></div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, doc, setDoc, onSnapshot, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const firebaseConfig = {	
+            apiKey: "AIzaSyACaEsIaxA8MMo3qs7wJ18OoBuHBVKfE9Q",
+            authDomain: "battle-tetris-5842e.firebaseapp.com",
+            projectId: "battle-tetris-5842e",
+            storageBucket: "battle-tetris-5842e.firebasestorage.app",
+            messagingSenderId: "628854407123",
+            appId: "1:628854407123:web:4f2d02076746c3e77a3926"
+        };
+        
+        let app, auth, db;
+        try {
+            app = initializeApp(firebaseConfig);
+            auth = getAuth(app);
+            db = getFirestore(app);
+        } catch(error) {
+            console.warn("Firebase 초기화 에러: " + error.message);
+        }
+
+        const appId = 'cyber-duel-tetris-local';
+        const COLS = 14, ROWS = 28;
+        const NORMAL_DROP_INTERVAL = 800;
+        const SLOW_DROP_INTERVAL = 2000;
+        
+        let currentUser = { uid: '', nickname: '' };
+        let currentRoom = null;
+        let isHost = false, isPlaying = false, isDead = false;
+        
+        let myGrid = createEmptyGrid();
+        let piece = null;
+        let lastDropTime = 0, animationFrameId = null;
+        let dropInterval = NORMAL_DROP_INTERVAL;
+        
+        let handledEvents = { garbage:0, blind:0, freeze:0, plane:0 };
+        let isBlinded = false, blindTimer = null;
+        let isFrozen = false, freezeTimer = null;
+        let slowTimer = null;
+
+        const gameContexts = {}; 
+        let particles = []; 
+        let planes = []; 
+
+        class AudioEngine {
+            constructor() { this.ctx = null; this.isPlaying = false; this.timeoutIds = []; this.melody = [ {note:659.25,dur:400},{note:493.88,dur:200},{note:523.25,dur:200},{note:587.33,dur:400}, {note:523.25,dur:200},{note:493.88,dur:200},{note:440.00,dur:400},{note:440.00,dur:200}, {note:523.25,dur:200},{note:659.25,dur:400},{note:587.33,dur:200},{note:523.25,dur:200}, {note:493.88,dur:600},{note:523.25,dur:200},{note:587.33,dur:400},{note:659.25,dur:400}, {note:523.25,dur:400},{note:440.00,dur:400},{note:440.00,dur:800} ]; }
+            init() { if(!this.ctx) this.ctx=new(window.AudioContext||window.webkitAudioContext)(); if(this.ctx.state==='suspended') this.ctx.resume(); }
+            playBGM() { if(this.isPlaying) return; this.init(); this.isPlaying=true; this.playMelodyLoop(); }
+            stopBGM() { this.isPlaying=false; this.timeoutIds.forEach(clearTimeout); this.timeoutIds=[]; }
+            playMelodyLoop(index=0) { if(!this.isPlaying||!this.ctx) return; const n=this.melody[index]; this.playTone(n.note,'square',n.dur/1000,0.04); const id=setTimeout(()=>this.playMelodyLoop((index+1)%this.melody.length),n.dur); this.timeoutIds.push(id); }
+            playTone(freq,type,duration,vol) { if(!this.ctx) return; const osc=this.ctx.createOscillator(), gain=this.ctx.createGain(); osc.type=type; osc.frequency.setValueAtTime(freq,this.ctx.currentTime); gain.gain.setValueAtTime(vol,this.ctx.currentTime); gain.gain.exponentialRampToValueAtTime(0.001,this.ctx.currentTime+duration); osc.connect(gain); gain.connect(this.ctx.destination); osc.start(); osc.stop(this.ctx.currentTime+duration); }
+            playAttackSound() { this.init(); const osc=this.ctx.createOscillator(), gain=this.ctx.createGain(); osc.type='sawtooth'; osc.frequency.setValueAtTime(800,this.ctx.currentTime); osc.frequency.exponentialRampToValueAtTime(100,this.ctx.currentTime+0.3); gain.gain.setValueAtTime(0.2,this.ctx.currentTime); gain.gain.exponentialRampToValueAtTime(0.001,this.ctx.currentTime+0.3); osc.connect(gain); gain.connect(this.ctx.destination); osc.start(); osc.stop(this.ctx.currentTime+0.3); }
+            playBlindSound() { this.init(); const t=this.ctx.currentTime; const osc=this.ctx.createOscillator(), gain=this.ctx.createGain(); osc.type='sine'; osc.frequency.setValueAtTime(300,t); osc.frequency.exponentialRampToValueAtTime(40,t+0.6); gain.gain.setValueAtTime(0.4,t); gain.gain.exponentialRampToValueAtTime(0.001,t+0.6); osc.connect(gain); gain.connect(this.ctx.destination); osc.start(t); osc.stop(t+0.6); }
+            playGalagaShot() { this.init(); const t=this.ctx.currentTime; const osc=this.ctx.createOscillator(), gain=this.ctx.createGain(); osc.type='square'; osc.frequency.setValueAtTime(1200,t); osc.frequency.exponentialRampToValueAtTime(400,t+0.12); gain.gain.setValueAtTime(0.18,t); gain.gain.exponentialRampToValueAtTime(0.001,t+0.12); osc.connect(gain); gain.connect(this.ctx.destination); osc.start(t); osc.stop(t+0.12); }
+            playPlaneAppear() { this.init(); const t=this.ctx.currentTime; const buf=this.ctx.createBuffer(1,this.ctx.sampleRate*0.8,this.ctx.sampleRate); const d=buf.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=Math.random()*2-1; const src=this.ctx.createBufferSource(); const filter=this.ctx.createBiquadFilter(); filter.type='bandpass'; filter.frequency.value=600; filter.Q.value=0.8; const gNoise=this.ctx.createGain(); src.buffer=buf; gNoise.gain.setValueAtTime(0.0,t); gNoise.gain.linearRampToValueAtTime(0.22,t+0.15); gNoise.gain.linearRampToValueAtTime(0.18,t+0.5); gNoise.gain.exponentialRampToValueAtTime(0.001,t+0.8); src.connect(filter); filter.connect(gNoise); gNoise.connect(this.ctx.destination); src.start(t); src.stop(t+0.8); const osc=this.ctx.createOscillator(), gOsc=this.ctx.createGain(); osc.type='sawtooth'; osc.frequency.setValueAtTime(520,t); osc.frequency.exponentialRampToValueAtTime(180,t+0.7); gOsc.gain.setValueAtTime(0.0,t); gOsc.gain.linearRampToValueAtTime(0.12,t+0.1); gOsc.gain.exponentialRampToValueAtTime(0.001,t+0.7); osc.connect(gOsc); gOsc.connect(this.ctx.destination); osc.start(t); osc.stop(t+0.7); }
+            playBombExplode() { this.init(); const t=this.ctx.currentTime; const osc1=this.ctx.createOscillator(), g1=this.ctx.createGain(); osc1.type='sine'; osc1.frequency.setValueAtTime(80,t); osc1.frequency.exponentialRampToValueAtTime(25,t+0.6); g1.gain.setValueAtTime(0.55,t); g1.gain.exponentialRampToValueAtTime(0.001,t+0.6); osc1.connect(g1); g1.connect(this.ctx.destination); osc1.start(t); osc1.stop(t+0.6); const bufLen=this.ctx.sampleRate*0.5; const nBuf=this.ctx.createBuffer(1,bufLen,this.ctx.sampleRate); const nd=nBuf.getChannelData(0); for(let i=0;i<nd.length;i++) nd[i]=(Math.random()*2-1)*Math.pow(1-i/bufLen,1.5); const nSrc=this.ctx.createBufferSource(), gN=this.ctx.createGain(); const lpf=this.ctx.createBiquadFilter(); lpf.type='lowpass'; lpf.frequency.value=1800; nSrc.buffer=nBuf; gN.gain.setValueAtTime(0.5,t); gN.gain.exponentialRampToValueAtTime(0.001,t+0.5); nSrc.connect(lpf); lpf.connect(gN); gN.connect(this.ctx.destination); nSrc.start(t); nSrc.stop(t+0.5); }
+        }
+        const audio = new AudioEngine();
+
+        const TETROMINOES = {
+            0:   { shape: [[0]], color: null },
+            'I': { shape: [[1,1,1,1]], color: '#38bdf8' },
+            'O': { shape: [[1,1],[1,1]], color: '#fbbf24' },
+            'T': { shape: [[0,1,0],[1,1,1]], color: '#818cf8' },
+            'L': { shape: [[0,0,1],[1,1,1]], color: '#fb923c' },
+            'G': { shape: [[1]], color: '#374151' },   
+            'BT':{ shape: [[0,3,0],[1,1,1]], color: '#818cf8' }, 
+            'PL':{ shape: [[0,0,4],[1,1,1]], color: '#fb923c' }, 
+            'SL':{ shape: [[1,0],[5,1],[0,1]], color: '#34d399' }, 
+            'FR':{ shape: [[6,6],[1,1]],       color: '#60a5fa' }, 
+            'PR':{ shape: [[0,7,0],[1,1,1]],   color: '#fef08a' }, 
+            'BL':{ shape: [[0,8,0],[1,1,1]],   color: '#a855f7' }
+        };
+        const PIECE_POOL = ['I','O','T','L','I','O','T','L','I','T','L','BT','PL','SL','FR','PR','BL'];
+        const COLORS = { 'I':'#38bdf8','O':'#fbbf24','T':'#818cf8','L':'#fb923c','G':'#374151','BT':'#818cf8','PL':'#fb923c','SL':'#34d399','FR':'#60a5fa','PR':'#fef08a','BL':'#a855f7','B':'#ef4444','P':'#34d399','W':'#34d399','F':'#60a5fa','U':'#fef08a','D':'#a855f7'};
+
+        function lighten(hex, amt) { return adjustColor(hex, amt); }
+        function darken(hex, amt) { return adjustColor(hex, -amt); }
+        function adjustColor(hex, amt) { const num = parseInt(hex.slice(1), 16); const r = Math.min(255, Math.max(0, (num>>16) + Math.round(255*amt))); const g = Math.min(255, Math.max(0, ((num>>8)&0xFF) + Math.round(255*amt))); const b = Math.min(255, Math.max(0, (num&0xFF) + Math.round(255*amt))); return `rgb(${r},${g},${b})`; }
+        function roundRect(ctx, x, y, w, h, r) { ctx.moveTo(x+r, y); ctx.arcTo(x+w, y, x+w, y+h, r); ctx.arcTo(x+w, y+h, x, y+h, r); ctx.arcTo(x, y+h, x, y, r); ctx.arcTo(x, y, x+w, y, r); ctx.closePath(); }
+
+        function drawBlock(ctx, bs, x, y, type, special=null) {
+            if (!type || type === 0) return;
+            const px = x * bs + 1, py = y * bs + 1, s = bs - 2;
+            const color = COLORS[special || type] || '#888';
+
+            const grad = ctx.createLinearGradient(px, py, px+s, py+s);
+            grad.addColorStop(0, lighten(color, 0.25)); grad.addColorStop(1, darken(color, 0.25));
+            ctx.fillStyle = grad; ctx.beginPath(); roundRect(ctx, px, py, s, s, 3); ctx.fill();
+            ctx.fillStyle = 'rgba(255,255,255,0.18)'; ctx.beginPath(); roundRect(ctx, px+1, py+1, s*0.55, s*0.35, 2); ctx.fill();
+
+            const cx = px + s/2, cy = py + s/2, iconR = s * 0.32;
+
+            if (special === 'B' || type === 'B') {
+                ctx.save(); ctx.beginPath(); ctx.arc(cx, cy + iconR*0.2, iconR, 0, Math.PI*2); ctx.fillStyle = '#1a1a1a'; ctx.fill(); ctx.strokeStyle = '#555'; ctx.lineWidth = 1; ctx.stroke(); ctx.beginPath(); ctx.moveTo(cx + iconR*0.6, cy - iconR*0.3); ctx.quadraticCurveTo(cx + iconR*1.1, cy - iconR*1.1, cx + iconR*0.3, cy - iconR*1.3); ctx.strokeStyle = '#8B6914'; ctx.lineWidth = Math.max(1.5, s*0.06); ctx.lineCap = 'round'; ctx.stroke(); ctx.beginPath(); ctx.arc(cx + iconR*0.3, cy - iconR*1.4, iconR*0.25, 0, Math.PI*2); ctx.fillStyle = '#ff6600'; ctx.fill(); ctx.beginPath(); ctx.arc(cx + iconR*0.3, cy - iconR*1.5, iconR*0.15, 0, Math.PI*2); ctx.fillStyle = '#ffdd00'; ctx.fill(); ctx.beginPath(); ctx.arc(cx - iconR*0.25, cy - iconR*0.1, iconR*0.28, 0, Math.PI*2); ctx.fillStyle = 'rgba(255,255,255,0.22)'; ctx.fill(); ctx.restore();
+            } else if (special === 'P' || type === 'P') {
+                ctx.save(); ctx.translate(cx, cy); const sc = iconR / 10; ctx.scale(sc, sc); ctx.fillStyle = '#e2e8f0'; ctx.beginPath(); ctx.ellipse(0, 0, 10, 3.5, 0, 0, Math.PI*2); ctx.fill(); ctx.fillStyle = '#94a3b8'; ctx.beginPath(); ctx.moveTo(-3, 0); ctx.lineTo(4, -8); ctx.lineTo(6, 0); ctx.closePath(); ctx.fill(); ctx.beginPath(); ctx.moveTo(-8, 0); ctx.lineTo(-10, -5); ctx.lineTo(-7, 0); ctx.closePath(); ctx.fill(); ctx.fillStyle = '#38bdf8'; ctx.beginPath(); ctx.ellipse(5, -1, 3, 2, -0.3, 0, Math.PI*2); ctx.fill(); ctx.fillStyle = '#f97316'; ctx.beginPath(); ctx.ellipse(-12, 1, 3, 1.5, 0, 0, Math.PI*2); ctx.fill(); ctx.restore();
+            } else if (special === 'W' || type === 'W') { 
+                ctx.save(); ctx.translate(cx, cy); ctx.beginPath(); ctx.arc(0, 0, iconR * 0.85, Math.PI, 0, false); ctx.fillStyle = '#059669'; ctx.fill(); ctx.strokeStyle = '#34d399'; ctx.lineWidth = Math.max(1, s * 0.04); ctx.beginPath(); ctx.arc(0, 0, iconR * 0.55, Math.PI, 0, false); ctx.stroke(); ctx.beginPath(); ctx.moveTo(-iconR*0.5, -iconR*0.2); ctx.lineTo(iconR*0.5, -iconR*0.2); ctx.stroke(); ctx.beginPath(); ctx.ellipse(0, iconR*0.3, iconR*0.7, iconR*0.35, 0, 0, Math.PI*2); ctx.fillStyle = '#6ee7b7'; ctx.fill(); ctx.restore();
+            } else if (special === 'F' || type === 'F') { 
+                ctx.save(); ctx.translate(cx, cy); ctx.strokeStyle = '#ffffff'; ctx.lineWidth = Math.max(1.5, s * 0.08); ctx.lineCap = 'round'; for(let i=0; i<4; i++) { ctx.beginPath(); ctx.moveTo(-iconR*0.8, 0); ctx.lineTo(iconR*0.8, 0); ctx.stroke(); ctx.rotate(Math.PI / 4); } ctx.restore();
+            } else if (special === 'U' || type === 'U') { 
+                ctx.save(); ctx.translate(cx, cy); ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.moveTo(0, -iconR); ctx.lineTo(iconR*0.25, -iconR*0.25); ctx.lineTo(iconR, 0); ctx.lineTo(iconR*0.25, iconR*0.25); ctx.lineTo(0, iconR); ctx.lineTo(-iconR*0.25, iconR*0.25); ctx.lineTo(-iconR, 0); ctx.lineTo(-iconR*0.25, -iconR*0.25); ctx.closePath(); ctx.fill(); ctx.restore();
+            } else if (special === 'D' || type === 'D') { 
+                ctx.save(); ctx.translate(cx, cy); ctx.strokeStyle = '#ffffff'; ctx.lineWidth = Math.max(1.5, s * 0.1); ctx.beginPath(); ctx.arc(0, 0, iconR * 0.75, 0, Math.PI*2); ctx.stroke(); ctx.beginPath(); ctx.moveTo(-iconR*0.7, -iconR*0.7); ctx.lineTo(iconR*0.7, iconR*0.7); ctx.stroke(); ctx.restore();
+            }
+        }
+
+        function drawBoard(ctx, bs, grid, currentPiece=null, hideBlocks=false) {
+            ctx.fillStyle = '#0d0f1a'; ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+            ctx.strokeStyle = 'rgba(255,255,255,0.04)'; ctx.lineWidth = 1;
+            for(let i=0;i<=COLS;i++){ctx.beginPath();ctx.moveTo(i*bs,0);ctx.lineTo(i*bs,ROWS*bs);ctx.stroke();}
+            for(let i=0;i<=ROWS;i++){ctx.beginPath();ctx.moveTo(0,i*bs);ctx.lineTo(COLS*bs,i*bs);ctx.stroke();}
+
+            for(let y=0;y<ROWS;y++){
+                for(let x=0;x<COLS;x++){
+                    if (hideBlocks) continue;
+                    const cell = grid[y][x];
+                    if(!cell || cell===0) continue;
+                    if(cell==='BOMB')   { drawBlock(ctx,bs,x,y,'BT','B'); continue; }
+                    if(cell==='PLANE')  { drawBlock(ctx,bs,x,y,'PL','P'); continue; }
+                    if(cell==='SLOW')   { drawBlock(ctx,bs,x,y,'SL','W'); continue; }
+                    if(cell==='FREEZE') { drawBlock(ctx,bs,x,y,'FR','F'); continue; }
+                    if(cell==='PURIFY') { drawBlock(ctx,bs,x,y,'PR','U'); continue; } 
+                    if(cell==='BLIND')  { drawBlock(ctx,bs,x,y,'BL','D'); continue; }
+                    drawBlock(ctx,bs,x,y,cell);
+                }
+            }
+
+            if(currentPiece) {
+                let ghostY = currentPiece.y;
+                while(isValidMove({...currentPiece, y:ghostY+1})) ghostY++;
+                if(ghostY !== currentPiece.y) {
+                    ctx.globalAlpha = 0.2;
+                    for(let py=0;py<currentPiece.shape.length;py++){
+                        for(let px2=0;px2<currentPiece.shape[py].length;px2++){
+                            const val = currentPiece.shape[py][px2];
+                            if(val) drawSpecial(ctx, bs, currentPiece.x+px2, ghostY+py, currentPiece.type, val);
+                        }
+                    }
+                    ctx.globalAlpha = 1;
+                }
+                for(let py=0;py<currentPiece.shape.length;py++){
+                    for(let px2=0;px2<currentPiece.shape[py].length;px2++){
+                        const val = currentPiece.shape[py][px2];
+                        if(val) drawSpecial(ctx, bs, currentPiece.x+px2, currentPiece.y+py, currentPiece.type, val);
+                    }
+                }
+            }
+        }
+        function drawSpecial(ctx, bs, x, y, type, val) {
+            if(val === 3) drawBlock(ctx, bs, x, y, type, 'B');
+            else if(val === 4) drawBlock(ctx, bs, x, y, type, 'P');
+            else if(val === 5) drawBlock(ctx, bs, x, y, type, 'W');
+            else if(val === 6) drawBlock(ctx, bs, x, y, type, 'F');
+            else if(val === 7) drawBlock(ctx, bs, x, y, type, 'U');
+            else if(val === 8) drawBlock(ctx, bs, x, y, type, 'D');
+            else drawBlock(ctx, bs, x, y, type);
+        }
+
+        // ─── LOGIN & UI FLOW ───
+        function showScreen(id) {
+            ['loginScreen','lobbyScreen','waitingScreen','gameScreen'].forEach(s => document.getElementById(s).classList.add('hidden'));
+            document.getElementById(id).classList.remove('hidden');
+        }
+        function createEmptyGrid() { return Array.from({length:ROWS}, () => Array(COLS).fill(0)); }
+        function randomPiece() { return PIECE_POOL[Math.floor(Math.random()*PIECE_POOL.length)]; }
+        
+        function enableLocalBypass() {
+            if(currentUser.uid) return; 
+            currentUser.uid = "local_agent_" + Math.random().toString(36).substring(2, 8);
+            const btn = document.getElementById('btnLogin');
+            btn.innerText = "시스템 접속 (우회 모드)";
+            btn.disabled = false;
+        }
+
+        async function initAuth() {
+            let authSuccess = false;
+
+            try { 
+                await signInAnonymously(auth); 
+            } catch (error) { 
+                console.warn("인증 에러가 발생하여 우회 모드로 전환합니다:", error); 
+                enableLocalBypass();
+            }
+
+            onAuthStateChanged(auth, (user) => {
+                if (user) {
+                    authSuccess = true;
+                    currentUser.uid = user.uid;
+                    const btn = document.getElementById('btnLogin');
+                    btn.innerText = "시스템 접속"; 
+                    btn.disabled = false;
+                }
+            });
+
+            setTimeout(() => {
+                if (!authSuccess) {
+                    console.warn("인증 지연으로 인해 우회 모드로 전환합니다.");
+                    enableLocalBypass();
+                }
+            }, 2000);
+        }
+
+        document.getElementById('btnLogin').addEventListener('click', () => {
+            if (!currentUser.uid) return alert("인증 대기 중입니다.");
+            const nick = document.getElementById('nicknameInput').value.trim();
+            if(!nick) return alert("닉네임을 입력하세요.");
+            currentUser.nickname = nick;
+            document.getElementById('userInfo').innerText = `요원: ${nick}`;
+            showScreen('lobbyScreen');
+            listenToRooms();
+        });
+
+        // ─── LOBBY & ROOM LOGIC ───
+        let roomsUnsubscribe = null, roomUnsubscribe = null;
+        function listenToRooms() {
+            if(roomsUnsubscribe) roomsUnsubscribe();
+            roomsUnsubscribe = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'rooms'), (snap) => {
+                const rooms = snap.docs.map(d => ({id: d.id, ...d.data()}));
+                renderLobby(rooms);
+            });
+        }
+        function renderLobby(rooms) {
+            const listDiv = document.getElementById('roomList'); listDiv.innerHTML = '';
+            if(!rooms.length) return listDiv.innerHTML = '<p style="color:var(--muted); text-align:center; padding:20px;">개설된 방이 없습니다.</p>';
+            rooms.forEach(room => {
+                if(room.status === 'finished') return;
+                const pCount = Object.keys(room.players || {}).length;
+                let maxP = 2; if(room.mode === 'ffa3') maxP=3; else if(room.mode==='ffa4'||room.mode==='team2v2') maxP=4;
+                const btn = pCount < maxP && room.status === 'waiting'
+                    ? `<button class="btn btn-primary" onclick="joinRoom('${room.id}')">참여</button>` : `<button class="btn btn-ghost" disabled>불가</button>`;
+                listDiv.innerHTML += `<div class="room-item"><div><strong>${room.title}</strong> <span style="font-size:12px;color:#888;">(${room.mode})</span> <span class="badge badge-blue">${pCount} / ${maxP}명</span></div>${btn}</div>`;
+            });
+        }
+
+        window.joinRoom = async (roomId) => {
+            const ref = doc(db, 'artifacts', appId, 'public', 'data', 'rooms', roomId);
+            await updateDoc(ref, { [`players.${currentUser.uid}`]: { nickname: currentUser.nickname, team: 'blue', state: 'alive', board: JSON.stringify(createEmptyGrid()), events: { garbage:0, blind:0, freeze:0, plane:0 } } });
+            enterRoom(roomId);
+        };
+        document.getElementById('btnCreateRoom').addEventListener('click', async () => {
+            audio.init();
+            const title = document.getElementById('roomTitleInput').value || `${currentUser.nickname}의 방`;
+            const mode = document.getElementById('roomModeSelect').value;
+            const roomId = Math.random().toString(36).substring(2,8);
+            const initPlayers = {}; initPlayers[currentUser.uid] = { nickname: currentUser.nickname, team: 'red', state: 'alive', board: JSON.stringify(createEmptyGrid()), events: { garbage:0, blind:0, freeze:0, plane:0 } };
+            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'rooms', roomId), { id: roomId, title, mode, host: currentUser.uid, status: 'waiting', players: initPlayers });
+            enterRoom(roomId);
+        });
+
+        function enterRoom(roomId) {
+            showScreen('waitingScreen');
+            if(roomUnsubscribe) roomUnsubscribe();
+            roomUnsubscribe = onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'rooms', roomId), (snap) => {
+                if(!snap.exists()) { alert("방이 삭제되었습니다."); leaveRoomLocal(); return; }
+                currentRoom = snap.data(); isHost = currentRoom.host === currentUser.uid;
+                
+                if(currentRoom.status === 'waiting') {
+                    if(isPlaying || !document.getElementById('gameScreen').classList.contains('hidden')) {
+                        isPlaying = false; isDead = false;
+                        cancelAnimationFrame(animationFrameId); audio.stopBGM();
+                        showScreen('waitingScreen');
+                    }
+                    renderWaitingRoom();
+                }
+                else if(currentRoom.status === 'playing') {
+                    if(!isPlaying) startGameUI();
+                    else syncGameData();
+                }
+                else if(currentRoom.status === 'finished') {
+                    if(isPlaying) endGame(currentRoom.winMsg || '종료');
+                }
+            });
+        }
+        
+        function renderWaitingRoom() {
+            document.getElementById('waitRoomTitle').innerText = currentRoom.title;
+            document.getElementById('waitRoomMode').innerText = `모드: ${currentRoom.mode.toUpperCase()}`;
+            const list = document.getElementById('playersList'); list.innerHTML = '';
+            Object.entries(currentRoom.players).forEach(([uid, p]) => {
+                const isMe = uid === currentUser.uid;
+                const teamText = currentRoom.mode === 'team2v2' ? `<span style="color:${p.team==='red'?'var(--danger)':'var(--accent)'}; font-weight:bold;">[${p.team.toUpperCase()}]</span>` : '';
+                const div = document.createElement('div'); div.className = 'player-slot';
+                div.innerHTML = `<span>${teamText} ${p.nickname} ${isMe ? '(나)' : ''}</span>`;
+                if(isHost && currentRoom.mode === 'team2v2') div.onclick = () => { updateDoc(doc(db,'artifacts',appId,'public','data','rooms',currentRoom.id), {[`players.${uid}.team`]: p.team==='red'?'blue':'red'}); };
+                list.appendChild(div);
+            });
+            const btnStart = document.getElementById('btnStartGame');
+            if(isHost) { btnStart.classList.remove('hidden'); btnStart.onclick = () => updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'rooms', currentRoom.id), { status: 'playing' }); }
+        }
+        
+        function leaveRoomLocal() {
+            if(roomUnsubscribe) roomUnsubscribe();
+            isPlaying = false; isDead = false;
+            cancelAnimationFrame(animationFrameId); audio.stopBGM();
+            showScreen('lobbyScreen');
+        }
+
+        document.getElementById('btnLeaveWait').onclick = leaveRoom;
+        document.getElementById('btnLeaveGame').onclick = leaveRoom;
+        
+        async function leaveRoom() {
+            if(!currentRoom) return;
+            const ref = doc(db, 'artifacts', appId, 'public', 'data', 'rooms', currentRoom.id);
+            if(isHost) await deleteDoc(ref); else await updateDoc(ref, { [`players.${currentUser.uid}.state`]: 'left' });
+            leaveRoomLocal();
+        }
+
+        // ─── DYNAMIC LAYOUT & SETUP ───
+        function startGameUI() {
+            showScreen('gameScreen');
+            document.getElementById('gameModeBadge').innerText = currentRoom.mode.toUpperCase();
+            document.getElementById('gameStatus').innerText = "전투 개시!";
+            document.getElementById('gameStatus').style.color = "var(--gold)";
+            
+            document.getElementById('btnNewGame').classList.add('hidden');
+            document.getElementById('btnLeaveGame').innerText = isHost ? "방삭제 후 퇴장" : "방 퇴장";
+            
+            const field = document.getElementById('battlefield'); field.innerHTML = '';
+            const uids = Object.keys(currentRoom.players);
+            
+            // 💡 수정됨: 레이아웃 계산을 넉넉하고 정확하게 보정
+            const availW = window.innerWidth - 60; 
+            const availH = window.innerHeight - 180; 
+            
+            let columns = uids.length;
+            if(uids.length === 4) columns = 2; 
+            
+            const maxWPerBoard = (availW / columns) - 40; 
+            
+            // 내 보드가 자바스크립트에서 1.1배 커지는 것을 감안하여 베이스 사이즈 계산
+            const bsFromH = Math.floor(availH / (ROWS * 1.1));
+            const bsFromW = Math.floor(maxWPerBoard / (COLS * 1.1));
+            let baseBS = Math.min(bsFromH, bsFromW);
+            if(baseBS < 10) baseBS = 10; 
+            
+            uids.forEach(uid => {
+                const p = currentRoom.players[uid];
+                const isMe = uid === currentUser.uid;
+                const bs = isMe ? Math.floor(baseBS * 1.1) : Math.floor(baseBS * 0.85); 
+                
+                const wrap = document.createElement('div');
+                wrap.className = `board-wrap team-${p.team} ${isMe ? 'is-me' : ''}`;
+                wrap.id = `wrap_${uid}`;
+                
+                wrap.innerHTML = `
+                    <div class="player-name-tag">${p.nickname}</div>
+                    <div style="position:relative;">
+                        <canvas id="cvs_${uid}" width="${COLS*bs}" height="${ROWS*bs}"></canvas>
+                        <canvas id="eff_${uid}" class="effect-layer" width="${COLS*bs}" height="${ROWS*bs}"></canvas>
+                        <div id="ovl_${uid}" class="overlay hidden"></div>
+                        <div id="ft_${uid}" class="floating-text"></div>
+                    </div>
+                `;
+                field.appendChild(wrap);
+                
+                gameContexts[uid] = {
+                    ctx: document.getElementById(`cvs_${uid}`).getContext('2d'),
+                    effCtx: document.getElementById(`eff_${uid}`).getContext('2d'),
+                    bs: bs
+                };
+            });
+
+            myGrid = createEmptyGrid(); handledEvents = { garbage:0, blind:0, freeze:0, plane:0 };
+            isBlinded = false; isFrozen = false; isDead = false; dropInterval = NORMAL_DROP_INTERVAL;
+            spawnPiece(); isPlaying = true; audio.playBGM();
+            animationFrameId = requestAnimationFrame(gameLoop);
+        }
+
+        // ─── SMART TARGETING ───
+        function getTargetUid() {
+            let targets = []; const myTeam = currentRoom.players[currentUser.uid].team;
+            Object.entries(currentRoom.players).forEach(([uid, p]) => {
+                if(uid === currentUser.uid || p.state !== 'alive') return;
+                if(currentRoom.mode === 'team2v2' && p.team === myTeam) return; 
+                targets.push({uid, board: JSON.parse(p.board)});
+            });
+            if(targets.length === 0) return null;
+            targets.sort((a, b) => {
+                const aHeight = a.board.findIndex(row => row.some(c => c !== 0));
+                const bHeight = b.board.findIndex(row => row.some(c => c !== 0));
+                return aHeight - bHeight;
+            });
+            return targets[0].uid; 
+        }
+
+        function isValidMove(p, testGrid=myGrid) {
+            for(let y=0; y<p.shape.length; y++) {
+                for(let x=0; x<p.shape[y].length; x++) {
+                    if(p.shape[y][x]) {
+                        const nx = p.x+x, ny = p.y+y;
+                        if(nx<0 || nx>=COLS || ny>=ROWS) return false;
+                        if(ny>=0 && testGrid[ny][nx] !== 0) return false;
+                    }
+                }
+            }
+            return true;
+        }
+
+        async function lockPiece() {
+            if(isDead) return;
+            let isCurrentDead = false;
+            for(let y=0; y<piece.shape.length; y++) {
+                for(let x=0; x<piece.shape[y].length; x++) {
+                    const val = piece.shape[y][x];
+                    if(val) {
+                        if(piece.y+y < 0) { isCurrentDead = true; continue; }
+                        if(val === 3)      myGrid[piece.y+y][piece.x+x] = 'BOMB';
+                        else if(val === 4) myGrid[piece.y+y][piece.x+x] = 'PLANE';
+                        else if(val === 5) myGrid[piece.y+y][piece.x+x] = 'SLOW';
+                        else if(val === 6) myGrid[piece.y+y][piece.x+x] = 'FREEZE';
+                        else if(val === 7) myGrid[piece.y+y][piece.x+x] = 'PURIFY';
+                        else if(val === 8) myGrid[piece.y+y][piece.x+x] = 'BLIND';
+                        else               myGrid[piece.y+y][piece.x+x] = piece.type;
+                    }
+                }
+            }
+            if(isCurrentDead) { triggerDeath(); return; }
+
+            const completedRows = [];
+            for(let row=0; row<ROWS; row++) if(myGrid[row].every(c=>c!==0)) completedRows.push(row);
+
+            if(completedRows.length > 0) {
+                let hasSlow=false, hasFreeze=false, hasPurify=false, hasBlind=false;
+                const planeRows = [], bombCols = [];
+                
+                completedRows.forEach(row => {
+                    let isPlaneRow = false;
+                    for(let c=0; c<COLS; c++){
+                        const cell = myGrid[row][c];
+                        if(cell === 'BOMB') bombCols.push(c);
+                        if(cell === 'PLANE') isPlaneRow = true;
+                        if(cell === 'SLOW') hasSlow = true;
+                        if(cell === 'FREEZE') hasFreeze = true;
+                        if(cell === 'PURIFY') hasPurify = true;
+                        if(cell === 'BLIND') hasBlind = true;
+                    }
+                    if(isPlaneRow) planeRows.push(row);
+                });
+
+                const uniqueBombCols = [...new Set(bombCols)];
+                let linesCleared = 0;
+                
+                const newGrid = myGrid.filter((row, i) => {
+                    if(completedRows.includes(i)) {
+                        if(!planeRows.includes(i)) linesCleared++;
+                        return false;
+                    }
+                    return true;
+                });
+                while(newGrid.length < ROWS) newGrid.unshift(Array(COLS).fill(0));
+                myGrid = newGrid;
+
+                const targetUid = getTargetUid();
+                let updates = { [`players.${currentUser.uid}.board`]: JSON.stringify(myGrid) };
+                
+                if(targetUid && currentRoom) {
+                    const targetRef = currentRoom.players[targetUid];
+                    
+                    if(uniqueBombCols.length > 0) {
+                        audio.playBombExplode();
+                        uniqueBombCols.forEach(col => {
+                            for(let r=0; r<ROWS; r++) myGrid[r][col] = 0;
+                            spawnColumnExplosion(currentUser.uid, col);
+                        });
+                        updates[`players.${currentUser.uid}.board`] = JSON.stringify(myGrid); 
+                        updates[`players.${targetUid}.events.garbage`] = targetRef.events.garbage + (3 * uniqueBombCols.length);
+                    }
+                    
+                    if(planeRows.length > 0) {
+                        updates[`players.${targetUid}.events.plane`] = targetRef.events.plane + 1;
+                        audio.playPlaneAppear();
+                    }
+                    if(hasFreeze) updates[`players.${targetUid}.events.freeze`] = targetRef.events.freeze + 1;
+                    if(hasBlind)  updates[`players.${targetUid}.events.blind`] = targetRef.events.blind + 1;
+                    
+                    if(uniqueBombCols.length === 0 && linesCleared > 0) {
+                        updates[`players.${targetUid}.events.garbage`] = targetRef.events.garbage + linesCleared;
+                        audio.playAttackSound();
+                    }
+                }
+
+                if(hasSlow) applyBuff('🐢 속도 감소!', '#34d399', () => {
+                    dropInterval = SLOW_DROP_INTERVAL;
+                    if(slowTimer) clearTimeout(slowTimer);
+                    slowTimer = setTimeout(()=>dropInterval=NORMAL_DROP_INTERVAL, 5000);
+                });
+                if(hasPurify) applyBuff('✨ 정화!', '#fef08a', () => {
+                    myGrid.splice(ROWS-3, 3);
+                    myGrid.unshift(Array(COLS).fill(0),Array(COLS).fill(0),Array(COLS).fill(0));
+                    updates[`players.${currentUser.uid}.board`] = JSON.stringify(myGrid);
+                });
+
+                await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'rooms', currentRoom.id), updates);
+            } else {
+                await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'rooms', currentRoom.id), { [`players.${currentUser.uid}.board`]: JSON.stringify(myGrid) });
+            }
+            spawnPiece();
+        }
+
+        function applyBuff(text, color, action) {
+            showFloatingText(currentUser.uid, text, color); action();
+        }
+        function showFloatingText(uid, text, color) {
+            const ft = document.getElementById(`ft_${uid}`);
+            if(!ft) return;
+            ft.innerText = text; ft.style.color = color; ft.style.textShadow = `0 0 20px ${color}, 0 0 10px rgba(0,0,0,0.8)`;
+            ft.classList.remove('show'); void ft.offsetWidth; ft.classList.add('show');
+        }
+
+        async function triggerDeath() {
+            isDead = true;
+            document.getElementById(`wrap_${currentUser.uid}`).classList.add('dead');
+            const ov = document.getElementById(`ovl_${currentUser.uid}`);
+            ov.innerText = 'DEAD'; ov.className = 'overlay overlay-dead'; ov.classList.remove('hidden');
+            await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'rooms', currentRoom.id), { [`players.${currentUser.uid}.state`]: 'dead' });
+        }
+
+        // ─── PARTICLES & EFFECTS ───
+        function spawnBlockExplosion(uid, col, row) {
+            const gc = gameContexts[uid]; if(!gc) return;
+            const cx = col * gc.bs + gc.bs/2, cy = row * gc.bs + gc.bs/2, sc = gc.bs/24;
+            for(let i=0; i<20; i++) particles.push({ uid, x: cx+(Math.random()-0.5)*gc.bs, y: cy+(Math.random()-0.5)*gc.bs, vx:(Math.random()-0.5)*5*sc, vy:(Math.random()-0.5)*5*sc, r:(Math.random()*4+1)*sc, life:1, color:['#ef4444','#f97316','#fbbf24','#fff','#818cf8'][Math.floor(Math.random()*5)] });
+        }
+        function spawnColumnExplosion(uid, col) {
+            const gc = gameContexts[uid]; if(!gc) return;
+            const cx = col * gc.bs + gc.bs/2, sc = gc.bs/24, cH = ROWS * gc.bs;
+            for(let i=0; i<60; i++) particles.push({ uid, x: cx+(Math.random()-0.5)*gc.bs*3, y: Math.random()*cH, vx:(Math.random()-0.5)*7*sc, vy:(Math.random()-0.5)*6*sc, r:(Math.random()*5+2)*sc, life:1, color:['#ef4444','#f97316','#fbbf24','#fff','#818cf8'][Math.floor(Math.random()*5)] });
+        }
+        function triggerPlaneAttackLocally(uid) {
+            const gc = gameContexts[uid]; if(!gc) return;
+            audio.playPlaneAppear();
+            const goRight = Math.random() > 0.5;
+            planes.push({
+                uid, x: goRight ? -60 : COLS*gc.bs+60, y: 20, dir: goRight?1:-1,
+                shotCols: [...Array(COLS).keys()].sort(()=>Math.random()-0.5).slice(0, 4),
+                shotsFired: 0, shotTimer: 0, bullets: [], done: false
+            });
+        }
+
+        // ─── RENDER & SYNC ───
+        function syncGameData() {
+            if(!isPlaying) return;
+            const myState = currentRoom.players[currentUser.uid];
+            
+            if(myState.state === 'dead' && !isDead) { isDead = true; }
+
+            if(!isDead) {
+                if(myState.events.garbage > handledEvents.garbage) {
+                    const diff = myState.events.garbage - handledEvents.garbage;
+                    myGrid = myGrid.slice(diff);
+                    for(let i=0; i<diff; i++) { const r=Array(COLS).fill('G'); r[Math.floor(Math.random()*COLS)]=0; myGrid.push(r); }
+                    handledEvents.garbage = myState.events.garbage;
+                    updateDoc(doc(db,'artifacts',appId,'public','data','rooms',currentRoom.id), {[`players.${currentUser.uid}.board`]:JSON.stringify(myGrid)});
+                }
+                if(myState.events.freeze > handledEvents.freeze) {
+                    handledEvents.freeze = myState.events.freeze; isFrozen = true;
+                    showFloatingText(currentUser.uid, '❄️ 얼음!', '#93c5fd');
+                    if(freezeTimer) clearTimeout(freezeTimer); freezeTimer = setTimeout(()=>isFrozen=false, 3000);
+                }
+                if(myState.events.blind > handledEvents.blind) {
+                    handledEvents.blind = myState.events.blind; isBlinded = true; audio.playBlindSound();
+                    showFloatingText(currentUser.uid, '🕶️ 암전!', '#a855f7');
+                    if(blindTimer) clearTimeout(blindTimer); blindTimer = setTimeout(()=>isBlinded=false, 4000);
+                }
+            }
+
+            if(myState.events.plane > handledEvents.plane) {
+                handledEvents.plane = myState.events.plane;
+                triggerPlaneAttackLocally(currentUser.uid);
+            }
+            checkWinCondition();
+        }
+
+        function checkWinCondition() {
+            if(!currentRoom || currentRoom.status === 'finished') return;
+            const alive = Object.values(currentRoom.players).filter(p => p.state === 'alive');
+            let isGameOver = false;
+            let winMsg = "";
+            
+            if(currentRoom.mode === 'team2v2') {
+                const aliveRed = alive.filter(p => p.team === 'red').length;
+                const aliveBlue = alive.filter(p => p.team === 'blue').length;
+                if(aliveRed === 0 || aliveBlue === 0) {
+                    isGameOver = true; winMsg = aliveRed > 0 ? '레드팀 승리!' : '블루팀 승리!';
+                }
+            } else {
+                if(alive.length <= 1 && Object.keys(currentRoom.players).length > 1) {
+                    isGameOver = true; winMsg = (alive[0]?.nickname || '무승부') + " 승리!";
+                }
+            }
+
+            if(isGameOver) {
+                if(isHost) {
+                    updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'rooms', currentRoom.id), { 
+                        status: 'finished', winMsg: winMsg 
+                    });
+                }
+                endGame(winMsg);
+            }
+        }
+        
+        function endGame(msg) {
+            isPlaying = false; audio.stopBGM(); document.getElementById('gameStatus').innerText = `종료: ${msg}`;
+            cancelAnimationFrame(animationFrameId);
+            
+            Object.entries(currentRoom.players).forEach(([uid, p]) => {
+                const gc = gameContexts[uid]; if(!gc) return;
+                const isMe = uid === currentUser.uid;
+                const grid = isMe ? myGrid : JSON.parse(p.board);
+                drawBoard(gc.ctx, gc.bs, grid, null, false); 
+            });
+
+            const ov = document.getElementById(`ovl_${currentUser.uid}`);
+            if(currentRoom.players[currentUser.uid].state === 'alive') { ov.innerText='WINNER'; ov.className='overlay overlay-win'; }
+            ov.classList.remove('hidden');
+
+            if(isHost) document.getElementById('btnNewGame').classList.remove('hidden');
+        }
+
+        document.getElementById('btnNewGame').addEventListener('click', async () => {
+            if(!isHost || !currentRoom) return;
+            const updates = { status: 'waiting' };
+            Object.keys(currentRoom.players).forEach(uid => {
+                updates[`players.${uid}.state`] = 'alive';
+                updates[`players.${uid}.board`] = JSON.stringify(createEmptyGrid());
+                updates[`players.${uid}.events`] = { garbage:0, blind:0, freeze:0, plane:0 };
+            });
+            await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'rooms', currentRoom.id), updates);
+        });
+
+        function gameLoop(ts) {
+            if(!isPlaying) return;
+            
+            if(!isDead) {
+                if(ts - lastDropTime > dropInterval) {
+                    const np = {...piece, y:piece.y+1};
+                    if(isValidMove(np)) piece = np; else lockPiece();
+                    lastDropTime = ts;
+                }
+            }
+
+            Object.entries(currentRoom.players).forEach(([uid, p]) => {
+                const gc = gameContexts[uid]; if(!gc) return;
+                const isMe = uid === currentUser.uid;
+                const grid = isMe ? myGrid : JSON.parse(p.board);
+                drawBoard(gc.ctx, gc.bs, grid, isMe && !isDead ? piece : null, isMe && !isDead ? isBlinded : false);
+                gc.effCtx.clearRect(0,0, gc.ctx.canvas.width, gc.ctx.canvas.height);
+            });
+
+            const nextParticles = [];
+            particles.forEach(p => {
+                const gc = gameContexts[p.uid]; if(!gc) return;
+                gc.effCtx.globalAlpha = p.life * 0.9; gc.effCtx.fillStyle = p.color;
+                gc.effCtx.beginPath(); gc.effCtx.arc(p.x, p.y, p.r, 0, Math.PI*2); gc.effCtx.fill();
+                p.x += p.vx; p.y += p.vy; p.vy += 0.2*(gc.bs/24); p.life -= 0.05;
+                if(p.life > 0) nextParticles.push(p);
+            });
+            particles = nextParticles;
+
+            const nextPlanes = [];
+            planes.forEach(a => {
+                const gc = gameContexts[a.uid]; if(!gc) return;
+                const sc = gc.bs/24; a.x += 5*sc*a.dir;
+                
+                if((a.dir>0 && a.x > COLS*gc.bs+100) || (a.dir<0 && a.x < -100)) { if(a.bullets.length===0) a.done=true; }
+                
+                a.shotTimer++;
+                if(a.shotsFired < a.shotCols.length && a.shotTimer%18===0) {
+                    a.bullets.push({x: a.shotCols[a.shotsFired]*gc.bs + gc.bs/2, y: a.y+14*sc, col: a.shotCols[a.shotsFired], hit:false});
+                    a.shotsFired++; audio.playGalagaShot();
+                }
+
+                const toRemove = [];
+                a.bullets.forEach((b,i) => {
+                    if(b.hit) { toRemove.push(i); return; }
+                    b.y += 8*sc;
+                    
+                    const grid = a.uid === currentUser.uid ? myGrid : JSON.parse(currentRoom.players[a.uid].board);
+                    let hitRow = -1; for(let r=0; r<ROWS; r++) { if(grid[r][b.col]!==0) { hitRow=r; break; } }
+                    
+                    if(hitRow !== -1 && b.y >= hitRow*gc.bs+gc.bs/2) {
+                        spawnBlockExplosion(a.uid, b.col, hitRow); b.hit = true; toRemove.push(i);
+                        if(a.uid === currentUser.uid && !isDead) { myGrid[hitRow][b.col] = 0; updateDoc(doc(db,'artifacts',appId,'public','data','rooms',currentRoom.id),{[`players.${a.uid}.board`]:JSON.stringify(myGrid)}); }
+                    } else if(b.y > ROWS*gc.bs) { toRemove.push(i); }
+                    else {
+                        gc.effCtx.fillStyle='#ffe040'; gc.effCtx.fillRect(b.x-2*sc, b.y-6*sc, 4*sc, 12*sc);
+                    }
+                });
+                for(let i=toRemove.length-1; i>=0; i--) a.bullets.splice(toRemove[i],1);
+
+                if(!a.done) {
+                    gc.effCtx.save(); gc.effCtx.translate(a.x, a.y); if(a.dir<0) gc.effCtx.scale(-1,1); gc.effCtx.scale(sc,sc);
+                    gc.effCtx.fillStyle='#94a3b8'; gc.effCtx.beginPath(); gc.effCtx.ellipse(0,0,28,10,0,0,Math.PI*2); gc.effCtx.fill();
+                    gc.effCtx.fillStyle='#64748b'; gc.effCtx.beginPath(); gc.effCtx.moveTo(-10,0); gc.effCtx.lineTo(10,-22); gc.effCtx.lineTo(16,0); gc.effCtx.fill();
+                    gc.effCtx.beginPath(); gc.effCtx.moveTo(-22,0); gc.effCtx.lineTo(-28,-14); gc.effCtx.lineTo(-20,0); gc.effCtx.fill();
+                    gc.effCtx.fillStyle='#f97316'; gc.effCtx.beginPath(); gc.effCtx.ellipse(-30,3,8,3,0,0,Math.PI*2); gc.effCtx.fill();
+                    gc.effCtx.restore();
+                }
+                if(!a.done) nextPlanes.push(a);
+            });
+            planes = nextPlanes;
+
+            animationFrameId = requestAnimationFrame(gameLoop);
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if(!isPlaying || isFrozen || isDead) return;
+            switch(e.key) {
+                case 'ArrowLeft':  if(isValidMove({...piece,x:piece.x-1})) piece.x--; break;
+                case 'ArrowRight': if(isValidMove({...piece,x:piece.x+1})) piece.x++; break;
+                case 'ArrowDown':  if(isValidMove({...piece,y:piece.y+1})) piece.y++; break;
+                case 'ArrowUp': {
+                    const rot = piece.shape[0].map((_,i)=>piece.shape.map(r=>r[i]).reverse());
+                    if(isValidMove({...piece, shape:rot})) piece.shape = rot; 
+                    break;
+                }
+                case ' ': e.preventDefault(); while(isValidMove({...piece, y:piece.y+1})) piece.y++; lockPiece(); break;
+            }
+        });
+        
+        function spawnPiece() {
+            const type = randomPiece(); piece = { type, shape: TETROMINOES[type].shape, x: Math.floor(COLS/2)-2, y: 0 };
+            if(!isValidMove(piece)) triggerDeath();
+        }
+        
+        initAuth();
+
+    </script>
+</body>
+</html>
