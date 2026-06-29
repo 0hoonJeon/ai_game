@@ -50,7 +50,7 @@ if mode == "🎮 대회 선수 (인증 필요)":
             st.error(f"🚨 게임 파일을 찾을 수 없습니다: {html_path}")
 
 # ── [2. 관전 및 채팅 모드] ──
-elif mode == "👀 관전 및 응원 모드":
+elif mode == "👀 연습게임":
     if st.session_state['spectator_profile'] is None:
         col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
